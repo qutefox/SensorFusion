@@ -23,8 +23,11 @@ Here I give the link to the latest version I can find during writing this guide:
 [Maxim Micros SDK (Windows), 1.0.1](https://www.analog.com/en/design-center/evaluation-hardware-and-software/software/software-download?swpart=SFW0010820B)
 
 During the Maxim Micros SDK (Windows) installation on the component selection screen make sure that "Visual Studio Code Support" is checked.
+
 ![Visual Studio Code support](maxim-sdk-vs-code-support.png "Visual Studio Code support")
+
 When the installation finishes a popup will appear that will take you to the readme file of the Visual Studio Code Support github page: https://github.com/Analog-Devices-MSDK/VSCode-Maxim/blob/main/README.md
+
 ![Visual Studio Code support popup](vs-code-support-popup.png "Visual Studio Code support popup")
 
 ## Setting the "MAXIM_PATH" in your VS Code settings
@@ -44,4 +47,5 @@ When the installation finishes a popup will appear that will take you to the rea
 
 ## How to update the Maxim SDK
 You can run the MaintenanceTool.exe which will automatically guide you through the update.
+
 ![Maxim Micros SDK Folder](maxim-sdk-folder.png "Maxim Micros SDK Folder")
