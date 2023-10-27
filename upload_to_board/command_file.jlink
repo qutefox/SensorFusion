@@ -1,0 +1,4 @@
+loadfile C:\sensor_fusion\software\build\sensor_fusion.elf
+reset
+go
+exit
