@@ -1,0 +1,9 @@
+[submodule "software/src/sensors/lsm6dsm-pid"]
+	path = software/src/sensors/lsm6dsm-pid
+	url = https://github.com/STMicroelectronics/lsm6dsm-pid
+[submodule "software/src/sensors/lps22hb-pid"]
+	path = software/src/sensors/lps22hb-pid
+	url = https://github.com/STMicroelectronics/lps22hb-pid
+[submodule "software/src/sensors/lis2mdl-pid"]
+	path = software/src/sensors/lis2mdl-pid
+	url = https://github.com/STMicroelectronics/lis2mdl-pid
