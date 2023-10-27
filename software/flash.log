@@ -1,0 +1,4 @@
+DEPRECATED! use 'adapter driver' not 'interface'
+Info : auto-selecting first available session transport "swd". To override use 'transport select <transport>'.
+Error: unable to find a matching CMSIS-DAP device
+
