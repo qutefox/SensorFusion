@@ -4,7 +4,7 @@
 
 #include "i2c.h"
 
-#include "src/io/i2c/i2c_speed.h"
+#include "src/io/i2c_speed.h"
 
 namespace io
 {

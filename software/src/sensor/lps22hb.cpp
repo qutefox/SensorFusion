@@ -2,8 +2,6 @@
 
 #include "mxc_errors.h"
 
-#include "src/debug_print.h"
-
 void lps22hb_interrupt_callback(void* this_obj)
 {
     sensor::Lps22hb* lps22hb = reinterpret_cast<sensor::Lps22hb*>(this_obj);
@@ -13,9 +11,11 @@ void lps22hb_interrupt_callback(void* this_obj)
 namespace sensor
 {
 
-Lps22hb::Lps22hb(io::i2c::I2cMaster* i2c_master, uint8_t i2c_address, io::pin::Input* _input_pin, bool debug)
+Lps22hb::Lps22hb(io::i2c::I2cMaster* i2c_master, uint8_t i2c_address,
+    io::pin::Input* _input_pin, storage::RegisterMap* _register_map, bool debug)
     : i2c_device{ i2c_master, i2c_address, debug }
     , input_pin{ _input_pin }
+    , register_map{ _register_map }
 {
     dev_ctx.handle = &i2c_device;
     dev_ctx.write_reg = [](void *handle, uint8_t reg, const uint8_t *bufp, uint16_t len) -> int32_t
@@ -30,87 +30,200 @@ Lps22hb::Lps22hb(io::i2c::I2cMaster* i2c_master, uint8_t i2c_address, io::pin::I
         };
 }
 
-// TODO: useful return value.
-// TODO: set in_error flag somewhere.
 int Lps22hb::begin()
 {
+    int err = E_NO_ERROR;
+
     // Check device ID.
     uint8_t whoami = 0;
-    lps22hb_device_id_get(&dev_ctx, &whoami);
+    err = lps22hb_device_id_get(&dev_ctx, &whoami);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
+
     if (whoami != LPS22HB_ID)
     {
-        debug_print("LPS22HB wrong device id: %02X.\n", whoami);
+        register_map->set_baro_error(true);
+        return err;
     }
 
     // Restore default configuration.
-    lps22hb_reset_set(&dev_ctx, PROPERTY_ENABLE);
+    err = lps22hb_reset_set(&dev_ctx, PROPERTY_ENABLE);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
+
     uint8_t rst;
     do {
-        lps22hb_reset_get(&dev_ctx, &rst);
+        err = lps22hb_reset_get(&dev_ctx, &rst);
+        if (err != E_NO_ERROR)
+        {
+            register_map->set_baro_error(true);
+            return err;
+        }
     } while (rst);
 
     if (input_pin != nullptr)
     {
-        input_pin->attach_interrupt_callback(lps22hb_interrupt_callback, this);
+        err = input_pin->attach_interrupt_callback(lps22hb_interrupt_callback, this);
+        if (err != E_NO_ERROR)
+        {
+            register_map->set_baro_error(true);
+            return err;
+        }
     }
 
     // Enable block data update.
-    lps22hb_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
+    err = lps22hb_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
     // Set fifo watermark to 16 samples.
-    lps22hb_fifo_watermark_set(&dev_ctx, 25);
+    err = lps22hb_fifo_watermark_set(&dev_ctx, 25);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
     // Set fifo mode to dynamic stream.
-    lps22hb_fifo_mode_set(&dev_ctx, LPS22HB_DYNAMIC_STREAM_MODE);
+    err = lps22hb_fifo_mode_set(&dev_ctx, LPS22HB_DYNAMIC_STREAM_MODE);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
     // Enable fifo.
-    lps22hb_fifo_set(&dev_ctx, PROPERTY_ENABLE);
+    err = lps22hb_fifo_set(&dev_ctx, PROPERTY_ENABLE);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
     // Enable interrupt when data stored in fifo reaches watermark (threshold) level.
-    lps22hb_fifo_threshold_on_int_set(&dev_ctx, PROPERTY_ENABLE);
+    err = lps22hb_fifo_threshold_on_int_set(&dev_ctx, PROPERTY_ENABLE);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
     // Put data ready or fifo flags on the interrupt pin.
-    lps22hb_int_pin_mode_set(&dev_ctx, LPS22HB_DRDY_OR_FIFO_FLAGS);
+    err = lps22hb_int_pin_mode_set(&dev_ctx, LPS22HB_DRDY_OR_FIFO_FLAGS);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
     // Set interrupt pin mode to push pull.
-    lps22hb_pin_mode_set(&dev_ctx, LPS22HB_PUSH_PULL);
+    err = lps22hb_pin_mode_set(&dev_ctx, LPS22HB_PUSH_PULL);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
     // Set interrupt pin polarity to active low.
-    lps22hb_int_polarity_set(&dev_ctx, LPS22HB_ACTIVE_LOW);
+    err = lps22hb_int_polarity_set(&dev_ctx, LPS22HB_ACTIVE_LOW);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
     // Set low power.
-    lps22hb_low_power_set(&dev_ctx, PROPERTY_ENABLE);
+    err = lps22hb_low_power_set(&dev_ctx, PROPERTY_ENABLE);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
     // Set low pass filter.
-    lps22hb_low_pass_filter_mode_set(&dev_ctx, LPS22HB_LPF_ODR_DIV_2);
+    err = lps22hb_low_pass_filter_mode_set(&dev_ctx, LPS22HB_LPF_ODR_DIV_2);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
     // Set Output Data Rate.
     // TODO: set LPS22HB_ODR_25_Hz. For dev tests we want to take things slow.
-    lps22hb_data_rate_set(&dev_ctx, LPS22HB_ODR_1_Hz);
+    err = lps22hb_data_rate_set(&dev_ctx, LPS22HB_ODR_1_Hz);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
+    register_map->set_baro_error(false);
     return E_NO_ERROR;
 }
 
-void Lps22hb::end()
+int Lps22hb::end()
 {
+    int err = E_NO_ERROR;
+
     // Restore default configuration.
-    lps22hb_reset_set(&dev_ctx, PROPERTY_ENABLE);
+    err = lps22hb_reset_set(&dev_ctx, PROPERTY_ENABLE);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
+
     uint8_t rst;
-    do {
-        lps22hb_reset_get(&dev_ctx, &rst);
+    do
+    {
+        err = lps22hb_reset_get(&dev_ctx, &rst);
+        if (err != E_NO_ERROR)
+        {
+            register_map->set_baro_error(true);
+            return err;
+        }
+
     } while (rst);
 
     // Set low power.
-    lps22hb_low_power_set(&dev_ctx, PROPERTY_ENABLE);
+    err = lps22hb_low_power_set(&dev_ctx, PROPERTY_ENABLE);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
+
+    register_map->set_baro_error(false);
+    return err;
 }
 
-// TODO: set in_error flag somewhere (on error).
-void Lps22hb::process_fifo_data()
+int Lps22hb::process_fifo_data()
 {
-    uint8_t data_level = 0;
-    lps22hb_fifo_data_level_get(&dev_ctx, &data_level);
+    int err = E_NO_ERROR;
 
-    lps22hb_fifo_output_data_burst_get(&dev_ctx, fifo_buffer, data_level);
+    uint8_t data_level = 0;
+    err = lps22hb_fifo_data_level_get(&dev_ctx, &data_level);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
+
+    err = lps22hb_fifo_output_data_burst_get(&dev_ctx, fifo_buffer, data_level);
+    if (err != E_NO_ERROR)
+    {
+        register_map->set_baro_error(true);
+        return err;
+    }
 
     int32_t avg_pressure = 0;
     int16_t avg_temperature = 0;
@@ -137,13 +250,11 @@ void Lps22hb::process_fifo_data()
     avg_pressure += modulo_avg_pressure / data_level;
     avg_temperature += modulo_avg_temperature / data_level;
 
-    // TODO: store/update current baro data in memory somewhere so host mcu can query it.
+    register_map->set_baro_pressure(avg_pressure);
+    register_map->set_baro_temperature(avg_temperature);
 
-    // For the time being we just dump it to the serial debug port.
-    float pressure_hpa = lps22hb_from_lsb_to_hpa(avg_pressure);
-    float temperature_c = lps22hb_from_lsb_to_degc(avg_temperature);
-
-    debug_print("avg.) pressure: %f hPa, temperature: %f C\n", pressure_hpa, temperature_c);
+    register_map->set_baro_error(false);
+    return err;
 }
 
 } // namespace sensor

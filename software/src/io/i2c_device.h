@@ -1,6 +1,6 @@
 #pragma once
 
-#include "i2c_master.h"
+#include "src/io/i2c_master.h"
 
 #define I2C_DEVICE_MAX_DATA_TX 64
 #define I2C_DEVICE_ADDR_SIZE sizeof(uint8_t)
