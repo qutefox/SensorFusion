@@ -19,9 +19,9 @@ public:
 
     int begin();
 
-    int end();
+    void end();
 
-    void dump_new_data();
+    void process_fifo_data();
 };
 
 

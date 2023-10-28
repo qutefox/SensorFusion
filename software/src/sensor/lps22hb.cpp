@@ -7,8 +7,7 @@
 void lps22hb_interrupt_callback(void* this_obj)
 {
     sensor::Lps22hb* lps22hb = reinterpret_cast<sensor::Lps22hb*>(this_obj);
-    debug_print("new lps22hb data\n");
-    lps22hb->dump_new_data();
+    lps22hb->process_fifo_data();
 }
 
 namespace sensor
@@ -31,6 +30,8 @@ Lps22hb::Lps22hb(io::i2c::I2cMaster* i2c_master, uint8_t i2c_address, io::pin::I
         };
 }
 
+// TODO: useful return value.
+// TODO: set in_error flag somewhere.
 int Lps22hb::begin()
 {
     // Check device ID.
@@ -57,7 +58,7 @@ int Lps22hb::begin()
     lps22hb_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
 
     // Set fifo watermark to 16 samples.
-    lps22hb_fifo_watermark_set(&dev_ctx, 16);
+    lps22hb_fifo_watermark_set(&dev_ctx, 25);
 
     // Set fifo mode to dynamic stream.
     lps22hb_fifo_mode_set(&dev_ctx, LPS22HB_DYNAMIC_STREAM_MODE);
@@ -84,35 +85,65 @@ int Lps22hb::begin()
     lps22hb_low_pass_filter_mode_set(&dev_ctx, LPS22HB_LPF_ODR_DIV_2);
 
     // Set Output Data Rate.
+    // TODO: set LPS22HB_ODR_25_Hz. For dev tests we want to take things slow.
     lps22hb_data_rate_set(&dev_ctx, LPS22HB_ODR_1_Hz);
 
     return E_NO_ERROR;
 }
 
-int Lps22hb::end()
+void Lps22hb::end()
 {
-    return lps22hb_data_rate_set(&dev_ctx, LPS22HB_POWER_DOWN);
+    // Restore default configuration.
+    lps22hb_reset_set(&dev_ctx, PROPERTY_ENABLE);
+    uint8_t rst;
+    do {
+        lps22hb_reset_get(&dev_ctx, &rst);
+    } while (rst);
+
+    // Set low power.
+    lps22hb_low_power_set(&dev_ctx, PROPERTY_ENABLE);
 }
 
-void Lps22hb::dump_new_data()
+// TODO: set in_error flag somewhere (on error).
+void Lps22hb::process_fifo_data()
 {
     uint8_t data_level = 0;
     lps22hb_fifo_data_level_get(&dev_ctx, &data_level);
 
-    debug_print("Fifo data level: %d.\n", data_level);
-
     lps22hb_fifo_output_data_burst_get(&dev_ctx, fifo_buffer, data_level);
+
+    int32_t avg_pressure = 0;
+    int16_t avg_temperature = 0;
+
+    int32_t modulo_avg_pressure = 0;
+    int16_t modulo_avg_temperature = 0;
+
+    int32_t curr_pressure = 0;
+    int16_t curr_temperature = 0;
+
+    // https://stackoverflow.com/questions/56663116/how-to-calculate-average-of-int64-t
     
     for (uint8_t i = 0 ; i < data_level ; ++i)
     {
-        int32_t pressure = lps22hb_fifo_output_data_to_raw_pressure(&fifo_buffer[i]);
-        int16_t temperature = lps22hb_fifo_output_data_to_raw_temperature(&fifo_buffer[i]);
+        curr_pressure = lps22hb_fifo_output_data_to_raw_pressure(&fifo_buffer[i]);
+        avg_pressure += curr_pressure / data_level;
+        modulo_avg_pressure += curr_pressure % data_level;
 
-        float pressure_hpa = lps22hb_from_lsb_to_hpa(pressure);
-        float temperature_c = lps22hb_from_lsb_to_degc(temperature);
-
-        debug_print("%d.) pressure: %f hPa, temperature: %f C\n", i, pressure_hpa, temperature_c);
+        curr_temperature = lps22hb_fifo_output_data_to_raw_temperature(&fifo_buffer[i]);
+        avg_temperature += curr_temperature / data_level;  
+        modulo_avg_temperature += curr_temperature % data_level;
     }
+
+    avg_pressure += modulo_avg_pressure / data_level;
+    avg_temperature += modulo_avg_temperature / data_level;
+
+    // TODO: store/update current baro data in memory somewhere so host mcu can query it.
+
+    // For the time being we just dump it to the serial debug port.
+    float pressure_hpa = lps22hb_from_lsb_to_hpa(avg_pressure);
+    float temperature_c = lps22hb_from_lsb_to_degc(avg_temperature);
+
+    debug_print("avg.) pressure: %f hPa, temperature: %f C\n", pressure_hpa, temperature_c);
 }
 
 } // namespace sensor

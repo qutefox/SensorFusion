@@ -1,0 +1,9 @@
+[submodule "software/src/sensor/lis2mdl-pid"]
+	path = software/src/sensor/lis2mdl-pid
+	url = https://github.com/qutefox/lis2mdl-pid
+[submodule "software/src/sensor/lps22hb-pid"]
+	path = software/src/sensor/lps22hb-pid
+	url = https://github.com/qutefox/lps22hb-pid
+[submodule "software/src/sensor/lsm6dsm-pid"]
+	path = software/src/sensor/lsm6dsm-pid
+	url = https://github.com/qutefox/lsm6dsm-pid
