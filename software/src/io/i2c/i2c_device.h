@@ -13,7 +13,7 @@ namespace i2c
 
 class I2cDevice
 {
-    I2cMaster* i2c_master;
+    I2cMaster* i2c_master = nullptr;
     mxc_i2c_req_t req;
     uint8_t buf[I2C_DEVICE_TX_BUF_SIZE];
 

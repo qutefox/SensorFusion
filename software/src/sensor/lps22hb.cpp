@@ -1,5 +1,7 @@
 #include "lps22hb.h"
 
+#include "mxc_errors.h"
+
 #include "src/debug_print.h"
 
 void lps22hb_interrupt_callback(void* this_obj)
@@ -9,8 +11,12 @@ void lps22hb_interrupt_callback(void* this_obj)
     lps22hb->dump_new_data();
 }
 
-sensor::Lps22hb::Lps22hb(io::i2c::I2cMaster* i2c_master, uint8_t i2c_address, mxc_gpio_regs_t *pin_port, uint32_t pin_mask, bool debug)
+namespace sensor
+{
+
+Lps22hb::Lps22hb(io::i2c::I2cMaster* i2c_master, uint8_t i2c_address, io::pin::Input* _input_pin, bool debug)
     : i2c_device{ i2c_master, i2c_address, debug }
+    , input_pin{ _input_pin }
 {
     dev_ctx.handle = &i2c_device;
     dev_ctx.write_reg = [](void *handle, uint8_t reg, const uint8_t *bufp, uint16_t len) -> int32_t
@@ -23,35 +29,12 @@ sensor::Lps22hb::Lps22hb(io::i2c::I2cMaster* i2c_master, uint8_t i2c_address, mx
             io::i2c::I2cDevice* i2c_device = reinterpret_cast<io::i2c::I2cDevice*>(handle);
             return i2c_device->read_bytes(reg, bufp, len);
         };
-    
-    gpio.port = pin_port;
-    gpio.mask = pin_mask;
-    gpio.pad = MXC_GPIO_PAD_NONE;
-    gpio.func = MXC_GPIO_FUNC_IN;
-    MXC_GPIO_Config(&gpio);
-    enable_interrupt_on_gpio();
 }
 
-int sensor::Lps22hb::enable_interrupt_on_gpio()
-{
-    MXC_GPIO_RegisterCallback(&gpio, lps22hb_interrupt_callback, this);
-    int err = MXC_GPIO_IntConfig(&gpio, MXC_GPIO_INT_FALLING);
-    if (err != E_NO_ERROR) return err;
-    MXC_GPIO_EnableInt(gpio.port, gpio.mask);
-    NVIC_EnableIRQ((IRQn_Type) MXC_GPIO_GET_IRQ(MXC_GPIO_GET_IDX(gpio.port)));
-    return err;
-}
-
-void sensor::Lps22hb::disable_interrupt_on_gpio()
-{
-    MXC_GPIO_DisableInt(gpio.port, gpio.mask);
-    NVIC_DisableIRQ((IRQn_Type) MXC_GPIO_GET_IRQ(MXC_GPIO_GET_IDX(gpio.port)));
-}
-
-int sensor::Lps22hb::begin()
+int Lps22hb::begin()
 {
     // Check device ID.
-    uint8_t whoami;
+    uint8_t whoami = 0;
     lps22hb_device_id_get(&dev_ctx, &whoami);
     if (whoami != LPS22HB_ID)
     {
@@ -64,6 +47,11 @@ int sensor::Lps22hb::begin()
     do {
         lps22hb_reset_get(&dev_ctx, &rst);
     } while (rst);
+
+    if (input_pin != nullptr)
+    {
+        input_pin->attach_interrupt_callback(lps22hb_interrupt_callback, this);
+    }
 
     // Enable block data update.
     lps22hb_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
@@ -101,12 +89,12 @@ int sensor::Lps22hb::begin()
     return E_NO_ERROR;
 }
 
-int sensor::Lps22hb::end()
+int Lps22hb::end()
 {
-    return E_NO_ERROR;
+    return lps22hb_data_rate_set(&dev_ctx, LPS22HB_POWER_DOWN);
 }
 
-void sensor::Lps22hb::dump_new_data()
+void Lps22hb::dump_new_data()
 {
     uint8_t data_level = 0;
     lps22hb_fifo_data_level_get(&dev_ctx, &data_level);
@@ -125,5 +113,6 @@ void sensor::Lps22hb::dump_new_data()
 
         debug_print("%d.) pressure: %f hPa, temperature: %f C\n", i, pressure_hpa, temperature_c);
     }
-    
 }
+
+} // namespace sensor
