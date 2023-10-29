@@ -212,8 +212,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     }
 
     // Set Output Data Rate.
-    // TODO: set LPS22HB_ODR_25_Hz. For dev tests we want to take things slow.
-    err = lps22hb_data_rate_set(dev_ctx, LPS22HB_ODR_1_Hz);
+    err = lps22hb_data_rate_set(dev_ctx, LPS22HB_ODR_25_Hz);
     if (err != E_NO_ERROR)
     {
         register_map->set_baro_error(true);

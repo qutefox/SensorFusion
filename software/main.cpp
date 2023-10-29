@@ -24,7 +24,6 @@ int main()
 
 	io::pin::Output red_led(MXC_GPIO0, LED_PIN_MASK);
 	
-
 	io::i2c::I2cSlave* i2c_slave = io::i2c::I2cSlave::get_instance();
 	sensor::Lps22hb* lps22hb = sensor::Lps22hb::get_instance();
 
@@ -46,10 +45,14 @@ int main()
 
 	while (true)
 	{
-		MXC_Delay(MXC_DELAY_SEC(1));
-		red_led.toggle();
-		i2c_slave->listen_for_next_event();
-		debug_print("");
+		// MXC_Delay(MXC_DELAY_SEC(1));
+		// red_led.toggle();
+		// i2c_slave->prepare_for_next_transaction();
+		// debug_print("");
+
+		i2c_slave->prepare_for_next_transaction();
+
+		while(!i2c_slave->is_current_transaction_done()) {};
     }
 
     return E_NO_ERROR;

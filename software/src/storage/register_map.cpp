@@ -60,15 +60,18 @@ bool RegisterMap::is_address_in_range(uint8_t addr)
 
 uint8_t RegisterMap::read(uint8_t addr)
 {
-    debug_print("RegisterMap: Reading register address: %02X.\n", addr);
+    // return addr;
+    // debug_print("RegisterMap: Reading register address: %02X.\n", addr);
     if (!is_address_in_range(addr)) return 0x00;
     uint8_t* rm = reinterpret_cast<uint8_t*>(&register_map);
-    return rm[addr];
+    uint8_t data = rm[addr];
+    // debug_print("RegisterMap: Read register value: %02X, for address: %02X.\n", data, addr);
+    return data;
 }
 
 void RegisterMap::write(uint8_t addr, uint8_t value)
 {
-    debug_print("RegisterMap: Writing register address: %02X with value: %02X.\n", addr, value);
+    // debug_print("RegisterMap: Writing register address: %02X with value: %02X.\n", addr, value);
     if (!is_address_in_range(addr)) return;
     const uint8_t* wem = reinterpret_cast<const uint8_t*>(&write_enable_map);
     uint8_t* rm = reinterpret_cast<uint8_t*>(&register_map);
@@ -109,6 +112,13 @@ void RegisterMap::set_baro_pressure(int32_t pressure)
     register_map.baro_pressure[0] = static_cast<uint8_t>(pressure & 0xFF);
     register_map.baro_pressure[1] = static_cast<uint8_t>((pressure >> 8) & 0xFF);
     register_map.baro_pressure[2] = static_cast<uint8_t>((pressure >> 16) & 0xFF);
+
+    debug_print("new pressure data: %02X, %02X, %02X.\n",
+        register_map.baro_pressure[0],
+        register_map.baro_pressure[1],
+        register_map.baro_pressure[2]);
+
+    debug_print("led data: %02X.\n", register_map.red_led);
 }
 
 void RegisterMap::set_baro_temperature(int16_t temperature)

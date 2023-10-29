@@ -28,12 +28,13 @@ private:
     static I2cSlave* instance;
     static uint32_t lock;
 
-    uint8_t write_addr; // Address to start storing data at
-	uint8_t read_addr; // Address to read data from
+    uint8_t address;
 	bool write_op; // Read/write operation state variable
 	uint8_t num_rx; // Number of characters in rx_buf
 	uint8_t rx_buf[I2C_SLAVE_RX_BUF_SIZE]; // Buffer to store received characters
+    uint8_t tx_byte = 0;
 	bool overflow; // Rx buffer overflowed during transaction
+    volatile bool transaction_done = false;
     storage::RegisterMap* register_map;
 
     int event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, void* retVal);
@@ -58,7 +59,9 @@ public:
 
     int begin();
 
-    int listen_for_next_event();
+    int prepare_for_next_transaction();
+
+    bool is_current_transaction_done() const { return transaction_done; }
 };
 
 
