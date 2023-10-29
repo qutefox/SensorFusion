@@ -1,26 +1,56 @@
 #pragma once
 
-#include "src/sensor/lps22hb-pid/lps22hb_reg.h"
 #include "src/io/i2c_device.h"
 #include "src/io/input_pin.h"
-#include "src/storage/register_map.h"
+
+// I do not wish to include "src/sensor/lps22hb-pid/lps22hb_reg.h" here.
+// I would like to only forward declare the absolute minimum stuff.
+
+// Forward declare types.
+struct _stmdev_ctx_t;
+typedef _stmdev_ctx_t stmdev_ctx_t;
+
+struct _lps22hb_fifo_output_data_t;
+typedef _lps22hb_fifo_output_data_t lps22hb_fifo_output_data_t;
+
+// Since we are using pointers to these types in this header file
+// it is enough for the compiler to know that these exist and the
+// size of them can be unknown.
+
+namespace storage
+{
+
+class RegisterMap; // Forward declare.
+
+} // namespace storage
 
 namespace sensor
 {
 
 class Lps22hb
 {
-    stmdev_ctx_t dev_ctx;
-    io::i2c::I2cDevice i2c_device;
-    io::pin::Input* input_pin = nullptr;
-    storage::RegisterMap* register_map = nullptr;
-    lps22hb_fifo_output_data_t fifo_buffer[32];
+private:
+    bool init_done = false;
+    static Lps22hb* instance;
+    static uint32_t lock;
+
+    stmdev_ctx_t* dev_ctx = nullptr;
+    lps22hb_fifo_output_data_t* fifo_buffer = nullptr;
+    io::pin::Input* interrupt_pin = nullptr;
+    io::i2c::I2cDevice* i2c_device = nullptr;
+    storage::RegisterMap* register_map;
+
+protected:
+    Lps22hb();
+    ~Lps22hb();
 
 public:
-    Lps22hb(io::i2c::I2cMaster* i2c_master, uint8_t i2c_address, io::pin::Input* input_pin,
-        storage::RegisterMap* register_map, bool debug);
+    Lps22hb(Lps22hb& other) = delete;
+    void operator=(const Lps22hb& other) = delete;
 
-    int begin();
+    static Lps22hb* get_instance();
+
+    int begin(uint8_t i2c_address, bool debug= false, io::pin::Input* interrupt_pin = nullptr);
 
     int end();
 

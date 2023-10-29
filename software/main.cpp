@@ -10,6 +10,7 @@
 
 #include "src/io/output_pin.h"
 #include "src/io/input_pin.h"
+#include "src/io/i2c_slave.h"
 
 #include "src/storage/register_map.h"
 
@@ -22,14 +23,15 @@ int main()
 	debug_print("\n\nMAX32660 started with debug info.\n");
 
 	io::pin::Output red_led(MXC_GPIO0, LED_PIN_MASK);
-	io::i2c::I2cMaster i2c_master(io::i2c::i2c_speed_e::I2C_SPEED_400KHZ);
-	storage::RegisterMap register_map(&red_led);
 	io::pin::Input lps22hb_int_pin(MXC_GPIO0, BARO_INT_MASK);
-	sensor::Lps22hb lps22hb(&i2c_master, 0x5C, &lps22hb_int_pin, &register_map, true);
+
+	io::i2c::I2cSlave* i2c_slave = io::i2c::I2cSlave::get_instance();
+	sensor::Lps22hb* lps22hb = sensor::Lps22hb::get_instance();
 
 	__enable_irq();
 
-	lps22hb.begin();
+	i2c_slave->begin();
+	lps22hb->begin(0x5C, true, &lps22hb_int_pin);
 
 	// TODO: enable low power mode.
 

@@ -120,7 +120,9 @@
         "random": "cpp",
         "iosfwd": "cpp",
         "limits": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "cstring": "cpp",
+        "cinttypes": "cpp"
     }
 }
 

@@ -1,6 +1,7 @@
 #include "i2c_master.h"
 
 #include "mxc_delay.h"
+#include "mxc_lock.h"
 
 #include "src/debug_print.h"
 #include "src/sensor_fusion_board.h"
@@ -10,20 +11,49 @@ namespace io
 namespace i2c
 {
 
-I2cMaster::I2cMaster(i2c_speed_e speed)
+I2cMaster* I2cMaster::instance = nullptr;
+uint32_t I2cMaster::lock = 0;
+
+I2cMaster::I2cMaster()
+    : init_done{ false }
 {
-    // Initialise I2C master
-	if (MXC_I2C_Init(I2C_MASTER, 1, 0) != E_NO_ERROR)
-	{
-		debug_print("Failed to initialise I2C master.\n");
-	}
-    else
+	
+}
+
+I2cMaster::~I2cMaster()
+{
+    MXC_I2C_Shutdown(I2C_MASTER);
+    init_done = false;
+}
+
+I2cMaster* I2cMaster::get_instance()
+{
+    MXC_GetLock(&lock, 1);
+    if (instance == nullptr)
     {
-        if (speed == i2c_speed_e::I2C_SPEED_100KHZ)
-	        MXC_I2C_SetFrequency(I2C_MASTER, 100000u);
-        else if (speed == i2c_speed_e::I2C_SPEED_400KHZ)
-            MXC_I2C_SetFrequency(I2C_MASTER, 400000u);
+        instance = new I2cMaster();
     }
+    MXC_FreeLock(&lock);
+    return instance;
+}
+
+int I2cMaster::begin()
+{
+    int err = E_NO_ERROR;
+
+    if (init_done) return err;
+
+    err = MXC_I2C_Init(I2C_MASTER, 1, 0);
+    if (err != E_NO_ERROR) return err;
+
+    err = MXC_I2C_SetFrequency(I2C_MASTER, I2C_MASTER_SPEED);
+    if (err != E_NO_ERROR) return err;
+
+    err = MXC_I2C_SetClockStretching(I2C_MASTER, I2C_MASTER_CLOCK_STRETCHING);
+    if (err != E_NO_ERROR) return err;
+
+    init_done = true;
+    return err;
 }
 
 void I2cMaster::scan()
@@ -47,7 +77,7 @@ void I2cMaster::scan()
 
         if (E_NO_ERROR == MXC_I2C_MasterTransaction(&req))
         {
-            debug_print("i2c master: found slave device on address: 0x%02x\n", address);
+            debug_print("i2c master: found slave device on address: 0x%02X\n", address);
             counter++;
         }
         MXC_Delay(MXC_DELAY_MSEC(50));

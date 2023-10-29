@@ -10,17 +10,24 @@ namespace storage
 class RegisterMap
 {
 
+private:
+    bool init_done = false;
+    static RegisterMap* instance;
+    static uint32_t lock;
+
     typedef struct __attribute__((packed))
     {
         register_types::sensor_errors_t sensor_errors;
         register_types::data_ready_t data_ready;
         register_types::red_led_t red_led;
+        int16_t baro_temp;
     } register_map_t;
 
     static constexpr register_map_t write_enable_map = {
-        { 0, 0, 0, 0, 0 }, // sensor_errors_t
-        { 0, 0, 0, 0, 0 }, // data_ready_t
-        { 1, 0 } // red_led_t
+        { 0, 0, 0, 0, 0 }, // sensor_errors
+        { 0, 0, 0, 0, 0 }, // data_ready
+        { 1, 0 }, // red_led
+        { 0 } // baro_temp
     };
 
     io::pin::Output* red_led;
@@ -28,8 +35,17 @@ class RegisterMap
 
     void update_sensor_errors();
 
+protected:
+    RegisterMap();
+    ~RegisterMap();
+
 public:
-    RegisterMap(io::pin::Output* red_led);
+    RegisterMap(RegisterMap& other) = delete;
+    void operator=(const RegisterMap& other) = delete;
+
+    static RegisterMap* get_instance();
+
+    int begin();
 
     void reset();
 

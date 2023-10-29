@@ -1,5 +1,6 @@
 #include "i2c_device.h"
 
+#include "src/io/i2c_master.h"
 #include "src/debug_print.h"
 
 namespace io
@@ -7,8 +8,8 @@ namespace io
 namespace i2c
 {
 
-I2cDevice::I2cDevice(I2cMaster* _i2c_master, uint8_t address, bool _debug)
-    : i2c_master{ _i2c_master }
+I2cDevice::I2cDevice(uint8_t address, bool _debug)
+    : i2c_master{ I2cMaster::get_instance() }
     , debug{ _debug }
 {
     req.addr = address;
@@ -17,29 +18,9 @@ I2cDevice::I2cDevice(I2cMaster* _i2c_master, uint8_t address, bool _debug)
     debug = false;
 }
 
-void I2cDevice::set_debug_mode(bool _debug)
+int I2cDevice::begin()
 {
-    debug = _debug;
-}
-
-void I2cDevice::set_address(uint8_t address)
-{
-    req.addr = address;
-}
-
-int I2cDevice::write(uint8_t* tx_data, unsigned int tx_size)
-{
-    return i2c_master->transfer(&req, tx_data, tx_size, nullptr, 0);
-}
-
-int I2cDevice::read(uint8_t tx_data, uint8_t* rx_data, unsigned int rx_size)
-{
-    return i2c_master->transfer(&req, &tx_data, 1, rx_data, rx_size);
-}
-
-int I2cDevice::transfer(uint8_t* tx_data, unsigned int tx_size, uint8_t* rx_data, unsigned int rx_size)
-{
-    return i2c_master->transfer(&req, tx_data, tx_size, rx_data, rx_size);
+    return i2c_master->begin();
 }
 
 int I2cDevice::read_reg(uint8_t reg_addr, uint8_t& value)

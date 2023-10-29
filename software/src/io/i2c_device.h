@@ -1,6 +1,8 @@
 #pragma once
 
-#include "src/io/i2c_master.h"
+#include <stdint.h>
+
+#include "i2c.h"
 
 #define I2C_DEVICE_MAX_DATA_TX 64
 #define I2C_DEVICE_ADDR_SIZE sizeof(uint8_t)
@@ -10,6 +12,8 @@ namespace io
 {
 namespace i2c
 {
+
+class I2cMaster; // Forward declare.
 
 class I2cDevice
 {
@@ -21,19 +25,14 @@ protected:
     bool debug = false;
 
 public:
-    I2cDevice(I2cMaster* i2c_master, uint8_t address, bool debug = false);
+    I2cDevice(uint8_t address, bool debug = false);
 
-    int write(uint8_t* tx_data, unsigned int tx_size);
-    int read(uint8_t tx_data, uint8_t* rx_data, unsigned int rx_size);
-    int transfer(uint8_t* tx_data, unsigned int tx_size, uint8_t* rx_data, unsigned int rx_size);
+    int begin();
 
     int read_reg(uint8_t reg_addr, uint8_t& value);
     int read_bytes(uint8_t reg_addr, uint8_t* value, unsigned int read_len);
     int write_reg(uint8_t reg_addr, uint8_t value);
     int write_bytes(uint8_t reg_addr, const uint8_t* value, unsigned int write_len);
-
-    void set_debug_mode(bool debug);
-    void set_address(uint8_t address);
 };
 
 } // namespace i2c
