@@ -47,7 +47,7 @@ int I2cMaster::begin()
     if (err != E_NO_ERROR) return err;
 
     err = MXC_I2C_SetFrequency(I2C_MASTER, I2C_MASTER_SPEED);
-    if (err != E_NO_ERROR) return err;
+    if (err < 0) return err;
 
     err = MXC_I2C_SetClockStretching(I2C_MASTER, I2C_MASTER_CLOCK_STRETCHING);
     if (err != E_NO_ERROR) return err;

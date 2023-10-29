@@ -36,7 +36,6 @@ private:
 	bool overflow; // Rx buffer overflowed during transaction
     storage::RegisterMap* register_map;
 
-    int listen_for_next_event();
     int event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, void* retVal);
 
     void reset_state();
@@ -58,6 +57,8 @@ public:
     static I2cSlave* get_instance();
 
     int begin();
+
+    int listen_for_next_event();
 };
 
 
