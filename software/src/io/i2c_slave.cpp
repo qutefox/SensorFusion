@@ -19,7 +19,7 @@ uint32_t I2cSlave::lock = 0;
 I2cSlave::I2cSlave()
 	: init_done{ false }
 	, transaction_done{ false }
-	, register_map{ storage::RegisterMap::get_instance() }
+	, register_map_rw{ storage::RegisterMapReaderWriter::get_instance() }
 {
 
 }
@@ -48,7 +48,7 @@ int I2cSlave::begin()
 
     if (init_done) return err;
 
-	err = register_map->begin();
+	err = register_map_rw->begin();
     if (err != E_NO_ERROR) return err;
 
 	reset_state();
@@ -64,7 +64,17 @@ int I2cSlave::begin()
 	if (err < 0) return err;
 
 	// Enable I2C interrupt
-	MXC_NVIC_SetVector(MXC_I2C_GET_IRQ(MXC_I2C_GET_IDX(I2C_SLAVE)), [](){ MXC_I2C_AsyncHandler(I2C_SLAVE); });
+	MXC_NVIC_SetVector(MXC_I2C_GET_IRQ(MXC_I2C_GET_IDX(I2C_SLAVE)),
+		[]()
+		{
+			MXC_I2C_AsyncHandler(I2C_SLAVE);
+
+			I2cSlave* i2c_slave = I2cSlave::get_instance();
+			if (i2c_slave->is_current_transaction_done())
+			{
+				i2c_slave->prepare_for_next_transaction();
+			}
+		});
 	NVIC_EnableIRQ(MXC_I2C_GET_IRQ(MXC_I2C_GET_IDX(I2C_SLAVE)));
 
 	err = prepare_for_next_transaction();
@@ -85,14 +95,12 @@ int I2cSlave::prepare_for_next_transaction()
 {
 	transaction_done = false;
 
-	int ret_val = MXC_I2C_SlaveTransactionAsync(I2C_SLAVE,
+	return MXC_I2C_SlaveTransactionAsync(I2C_SLAVE,
 		[](mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, void* retVal)->int
 		{
 			I2cSlave* i2c_slave = I2cSlave::get_instance();
 			return i2c_slave->event_handler(i2c, event, retVal);
 		});
-
-	return ret_val;
 }
 
 int I2cSlave::event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, void* retVal)
@@ -123,16 +131,11 @@ int I2cSlave::event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, vo
 		overflow = false;
 
 		// Read all bytes from RXFIFO
-		if (MXC_I2C_GetRXFIFOAvailable(I2C_SLAVE) != 0)
-		{
-			receive_data();
-		}
+		rx_avail = MXC_I2C_GetRXFIFOAvailable(I2C_SLAVE);
+		receive_data();
 
 		// Make sure we received a valid number of bytes to reset the read address.
-		if (num_rx >= I2C_SLAVE_ADDR_SIZE)
-		{
-			address = rx_buf[0];
-		}
+		if (num_rx >= I2C_SLAVE_ADDR_SIZE) address = rx_buf[0];
 		
 		break;
 
@@ -151,6 +154,7 @@ int I2cSlave::event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, vo
 		// The receive FIFO contains more bytes than its threshold level.
 
 		// Read data from I2C RX FIFO
+		rx_avail = MXC_I2C_GetRXFIFOAvailable(I2C_SLAVE);
 		receive_data();
 		break;
 
@@ -158,8 +162,7 @@ int I2cSlave::event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, vo
 		//  The transaction has ended.
 
 		// Transaction complete -> Reset state and process data as necessary
-
-		cleanup(err);
+		transaction_complete(err);
 		transaction_done = true;
 		break;
 
@@ -172,13 +175,14 @@ int I2cSlave::event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, vo
 
 void I2cSlave::send_data()
 {
-	tx_byte = register_map->read(address);
+	// Read address check is built into the read.
+	tx_byte = register_map_rw->read(address);
 	address += MXC_I2C_WriteTXFIFO(I2C_SLAVE, &tx_byte, 1);
 }
 
 void I2cSlave::receive_data()
 {
-	int rx_avail = MXC_I2C_GetRXFIFOAvailable(I2C_SLAVE);
+	if (rx_avail == 0) return;
 
 	// Check whether receive buffer will overflow
 	if ((rx_avail + num_rx) > static_cast<int>(I2C_SLAVE_RX_BUF_SIZE))
@@ -204,37 +208,28 @@ void I2cSlave::store_data()
 	// Get write address
 	address = rx_buf[0];
 
-	// Check write address
-	if (!register_map->is_address_in_range(address)) return;
+	// Is there any data or we just got an address?
 	if (num_rx == 0) return;
 
-	// Write bytes from buffer
-	uint8_t rx_idx = I2C_SLAVE_ADDR_SIZE;
-	for (uint8_t i = 0 ; i < num_rx; ++i)
-	{
-		register_map->write(address++, rx_buf[rx_idx+i]);
-	}
+	// Write bytes from buffer. Write address check is built into write.
+	address += register_map_rw->write(address, &rx_buf[I2C_SLAVE_ADDR_SIZE], num_rx);
 }
 
-void I2cSlave::cleanup(int err)
+void I2cSlave::transaction_complete(int err)
 {
-	// debug_print("cleanup: err=%d.\n", err);
 	if (err == E_NO_ERROR)
 	{
-		// debug_print("cleanup: write op=%d.\n", write_op ? 1 : 0);
-		if (write_op)
+		if (write_op) // Write operation
 		{
-			// Write operation
-
 			// Read remaining characerts if any remain in FIFO
-			if(MXC_I2C_GetRXFIFOAvailable(I2C_SLAVE)) receive_data();
+			rx_avail = MXC_I2C_GetRXFIFOAvailable(I2C_SLAVE);
+			receive_data();
 
 			// Store received data
 			store_data();
 		}
-		else
+		else // Read operation
 		{
-			// Read operation
 			while(I2C_SLAVE->status & MXC_F_I2C_STATUS_BUSY) { }
 		}
 	}

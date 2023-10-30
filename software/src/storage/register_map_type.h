@@ -54,4 +54,14 @@ typedef union
 
 
 } // namespace register_types
+
+typedef struct __attribute__((packed))
+{
+    register_types::sensor_errors_t sensor_errors;
+    register_types::data_ready_t data_ready;
+    register_types::red_led_t red_led;
+    uint8_t baro_pressure[3];
+    int16_t baro_temp;
+} register_map_t;
+
 } // namespace storage

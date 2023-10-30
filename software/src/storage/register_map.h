@@ -1,31 +1,26 @@
 #pragma once
 
+#include <stdint.h>
+
 #include "src/io/output_pin.h"
-#include "src/storage/register_types.h"
+#include "src/storage/register_map_type.h"
 
 namespace storage
 {
 
-typedef struct __attribute__((packed))
-{
-    register_types::sensor_errors_t sensor_errors;
-    register_types::data_ready_t data_ready;
-    register_types::red_led_t red_led;
-    uint8_t baro_pressure[3];
-    int16_t baro_temp;
-} register_map_t;
+class RegisterMapReaderWriter; // Forward declare.
 
 // I2C slave registers.
 class RegisterMap
 {
+    friend class RegisterMapReaderWriter;
 
 private:
     bool init_done = false;
     static RegisterMap* instance;
     static uint32_t lock;
 
-    io::pin::Output* red_led;
-    register_map_t register_map;
+    io::pin::Output* red_led = nullptr;
 
     void update_sensor_errors();
 
@@ -40,12 +35,7 @@ public:
     static RegisterMap* get_instance();
 
     int begin();
-
-    void reset();
-
-    bool is_address_in_range(uint8_t addr);
-    uint8_t read(uint8_t addr);
-    void write(uint8_t addr, uint8_t value);
+    void set_red_led_instance(io::pin::Output* red_led);
 
     void set_gyro_error(bool error);
     void set_xl_error(bool error);

@@ -3,7 +3,7 @@
 #include "mxc_device.h"
 #include "i2c.h"
 
-#include "src/storage/register_map.h"
+#include "src/storage/register_map_reader_writer.h"
 
 #define I2C_SLAVE_MAX_DATA_RX 64
 #define I2C_SLAVE_ADDR_SIZE sizeof(uint8_t)
@@ -34,8 +34,9 @@ private:
 	uint8_t rx_buf[I2C_SLAVE_RX_BUF_SIZE]; // Buffer to store received characters
     uint8_t tx_byte = 0;
 	bool overflow; // Rx buffer overflowed during transaction
+    int rx_avail = 0;
     volatile bool transaction_done = false;
-    storage::RegisterMap* register_map;
+    storage::RegisterMapReaderWriter* register_map_rw;
 
     int event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, void* retVal);
 
@@ -44,7 +45,7 @@ private:
     void send_data();
     void receive_data();
     void store_data();
-    void cleanup(int err);
+    void transaction_complete(int err);
 
 
 protected:
