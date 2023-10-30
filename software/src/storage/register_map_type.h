@@ -21,20 +21,20 @@ typedef struct
 
 typedef struct
 {
-    uint8_t gyro_error : 1;
-    uint8_t xl_error   : 1;
-    uint8_t mag_error  : 1;
-    uint8_t baro_error : 1;
-    uint8_t not_used   : 4;
+    uint8_t gyro_error  : 1;
+    uint8_t accel_error : 1;
+    uint8_t mag_error   : 1;
+    uint8_t baro_error  : 1;
+    uint8_t not_used    : 4;
 } sensor_errors_t;
 
 typedef struct
 {
-    uint8_t gyro_data_ready : 1;
-    uint8_t xl_data_ready   : 1;
-    uint8_t mag_data_ready  : 1;
-    uint8_t baro_data_ready : 1;
-    uint8_t not_used        : 4;
+    uint8_t gyro_data_ready  : 1;
+    uint8_t accel_data_ready : 1;
+    uint8_t mag_data_ready   : 1;
+    uint8_t baro_data_ready  : 1;
+    uint8_t not_used         : 4;
 } data_ready_t;
 
 typedef struct
@@ -54,6 +54,17 @@ typedef union
 
 
 } // namespace register_types
+
+#define SENSOR_FUSION_SENSOR_ERRORS    0x00
+#define SENSOR_FUSION_DATA_READY       0x01
+#define SENSOR_FUSION_RED_LED          0x02
+
+#define SENSOR_FUSION_BARO_PRESSURE_XL 0x03
+#define SENSOR_FUSION_BARO_PRESSURE_L  0x04
+#define SENSOR_FUSION_BARO_PRESSURE_H  0x05
+
+#define SENSOR_FUSION_BARO_TEMP_L      0x06
+#define SENSOR_FUSION_BARO_TEMP_H      0x07
 
 typedef struct __attribute__((packed))
 {

@@ -17,12 +17,8 @@ typedef _lps22hb_fifo_output_data_t lps22hb_fifo_output_data_t;
 // it is enough for the compiler to know that these exist and the
 // size of them can be unknown.
 
-namespace storage
-{
 
-class RegisterMap; // Forward declare.
-
-} // namespace storage
+class DataProcessor; // Forward declare.
 
 namespace sensor
 {
@@ -38,7 +34,7 @@ private:
     lps22hb_fifo_output_data_t* fifo_buffer = nullptr;
     io::pin::Input* interrupt_pin = nullptr;
     io::i2c::I2cDevice* i2c_device = nullptr;
-    storage::RegisterMap* register_map;
+    DataProcessor* data_processor;
 
 protected:
     Lps22hb();

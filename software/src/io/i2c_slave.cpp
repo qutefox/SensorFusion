@@ -5,7 +5,6 @@
 #include "nvic_table.h"
 
 #include "src/sensor_fusion_board.h"
-#include "src/storage/register_map.h"
 #include "src/debug_print.h"
 
 namespace io
@@ -47,9 +46,6 @@ int I2cSlave::begin()
 	int err = E_NO_ERROR;
 
     if (init_done) return err;
-
-	err = register_map_rw->begin();
-    if (err != E_NO_ERROR) return err;
 
 	reset_state();
 
@@ -130,8 +126,7 @@ int I2cSlave::event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, vo
 		write_op = false;
 		overflow = false;
 
-		// Read all bytes from RXFIFO
-		rx_avail = MXC_I2C_GetRXFIFOAvailable(I2C_SLAVE);
+		// Read all bytes from RXFIFO.
 		receive_data();
 
 		// Make sure we received a valid number of bytes to reset the read address.
@@ -144,7 +139,7 @@ int I2cSlave::event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, vo
 	case MXC_I2C_EVT_TX_THRESH:
 		// The transmit FIFO contains fewer bytes than its threshold level.
 
-		// (Re)fill I2C TX FIFO
+		// (Re)fill I2C TX FIFO.
 		send_data();
 		break;
 
@@ -153,15 +148,14 @@ int I2cSlave::event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, vo
 	case MXC_I2C_EVT_RX_THRESH:
 		// The receive FIFO contains more bytes than its threshold level.
 
-		// Read data from I2C RX FIFO
-		rx_avail = MXC_I2C_GetRXFIFOAvailable(I2C_SLAVE);
+		// Read data from I2C RX FIFO.
 		receive_data();
 		break;
 
 	case MXC_I2C_EVT_TRANS_COMP:
 		//  The transaction has ended.
 
-		// Transaction complete -> Reset state and process data as necessary
+		// Transaction complete -> Reset state and process data as necessary.
 		transaction_complete(err);
 		transaction_done = true;
 		break;
@@ -182,9 +176,10 @@ void I2cSlave::send_data()
 
 void I2cSlave::receive_data()
 {
+	int rx_avail = MXC_I2C_GetRXFIFOAvailable(I2C_SLAVE);
 	if (rx_avail == 0) return;
 
-	// Check whether receive buffer will overflow
+	// Check whether receive buffer will overflow.
 	if ((rx_avail + num_rx) > static_cast<int>(I2C_SLAVE_RX_BUF_SIZE))
 	{
 		overflow = true;
@@ -192,13 +187,13 @@ void I2cSlave::receive_data()
 		num_rx = I2C_SLAVE_ADDR_SIZE;
 	}
 
-	// Read remaining characters in FIFO
+	// Read remaining characters in FIFO.
 	num_rx += MXC_I2C_ReadRXFIFO(I2C_SLAVE, &rx_buf[num_rx], rx_avail);
 }
 
 void I2cSlave::store_data()
 {
-	// Check to see if there are enough bytes to process received data
+	// Check to see if there are enough bytes to process received data.
 	if (num_rx < I2C_SLAVE_ADDR_SIZE) return;
 
 	// Get number of data bytes received
@@ -219,22 +214,21 @@ void I2cSlave::transaction_complete(int err)
 {
 	if (err == E_NO_ERROR)
 	{
-		if (write_op) // Write operation
+		if (write_op) // Write operation:
 		{
-			// Read remaining characerts if any remain in FIFO
-			rx_avail = MXC_I2C_GetRXFIFOAvailable(I2C_SLAVE);
+			// Read remaining characerts if any remain in FIFO.
 			receive_data();
 
-			// Store received data
+			// Store received data.
 			store_data();
 		}
-		else // Read operation
+		else // Read operation:
 		{
 			while(I2C_SLAVE->status & MXC_F_I2C_STATUS_BUSY) { }
 		}
 	}
 
-	// Reset i2c slave state
+	// Reset i2c slave state.
 	reset_state();
 }
 

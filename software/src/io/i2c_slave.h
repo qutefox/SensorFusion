@@ -34,7 +34,6 @@ private:
 	uint8_t rx_buf[I2C_SLAVE_RX_BUF_SIZE]; // Buffer to store received characters
     uint8_t tx_byte = 0;
 	bool overflow; // Rx buffer overflowed during transaction
-    int rx_avail = 0;
     volatile bool transaction_done = false;
     storage::RegisterMapReaderWriter* register_map_rw;
 
@@ -46,7 +45,6 @@ private:
     void receive_data();
     void store_data();
     void transaction_complete(int err);
-
 
 protected:
     I2cSlave();

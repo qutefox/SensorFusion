@@ -3,7 +3,7 @@
 #include "mxc_errors.h"
 #include "mxc_lock.h"
 
-#include "src/storage/register_map.h"
+#include "src/data_processor.h"
 #include "src/sensor/lps22hb-pid/lps22hb_reg.h"
 
 void lps22hb_interrupt_callback(void* this_obj)
@@ -25,7 +25,7 @@ Lps22hb::Lps22hb()
     , fifo_buffer{ new lps22hb_fifo_output_data_t[32] }
     , interrupt_pin{ nullptr }
     , i2c_device{ nullptr }
-    , register_map{ storage::RegisterMap::get_instance() }
+    , data_processor{ DataProcessor::get_instance() }
 {
 
 }
@@ -59,14 +59,14 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
 
     if (init_done) return err;
 
-    err = register_map->begin();
+    err = data_processor->begin();
     if (err != E_NO_ERROR) return err;
 
     i2c_device = new io::i2c::I2cDevice(i2c_address, debug);
     err = i2c_device->begin();
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -89,13 +89,13 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_device_id_get(dev_ctx, &whoami);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
     if (whoami != LPS22HB_ID)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -103,7 +103,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_reset_set(dev_ctx, PROPERTY_ENABLE);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -114,7 +114,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
         err = lps22hb_reset_get(dev_ctx, &rst);
         if (err != E_NO_ERROR)
         {
-            register_map->set_baro_error(true);
+            data_processor->set_baro_error(true);
             return err;
         }
     }
@@ -126,7 +126,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
         err = interrupt_pin->attach_interrupt_callback(lps22hb_interrupt_callback, this);
         if (err != E_NO_ERROR)
         {
-            register_map->set_baro_error(true);
+            data_processor->set_baro_error(true);
             return err;
         }
     }
@@ -135,7 +135,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_block_data_update_set(dev_ctx, PROPERTY_ENABLE);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -143,7 +143,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_fifo_watermark_set(dev_ctx, 25);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -151,7 +151,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_fifo_mode_set(dev_ctx, LPS22HB_DYNAMIC_STREAM_MODE);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -159,7 +159,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_fifo_set(dev_ctx, PROPERTY_ENABLE);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -167,7 +167,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_fifo_threshold_on_int_set(dev_ctx, PROPERTY_ENABLE);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -175,7 +175,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_int_pin_mode_set(dev_ctx, LPS22HB_DRDY_OR_FIFO_FLAGS);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -183,7 +183,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_pin_mode_set(dev_ctx, LPS22HB_PUSH_PULL);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -191,7 +191,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_int_polarity_set(dev_ctx, LPS22HB_ACTIVE_LOW);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -199,7 +199,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_low_power_set(dev_ctx, PROPERTY_ENABLE);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -207,7 +207,7 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_low_pass_filter_mode_set(dev_ctx, LPS22HB_LPF_ODR_DIV_2);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -215,11 +215,11 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
     err = lps22hb_data_rate_set(dev_ctx, LPS22HB_ODR_25_Hz);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
-    register_map->set_baro_error(false);
+    data_processor->set_baro_error(false);
     return err;
 }
 
@@ -231,7 +231,7 @@ int Lps22hb::end()
     err = lps22hb_reset_set(dev_ctx, PROPERTY_ENABLE);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -242,7 +242,7 @@ int Lps22hb::end()
         err = lps22hb_reset_get(dev_ctx, &rst);
         if (err != E_NO_ERROR)
         {
-            register_map->set_baro_error(true);
+            data_processor->set_baro_error(true);
             return err;
         }
 
@@ -253,7 +253,7 @@ int Lps22hb::end()
     err = lps22hb_low_power_set(dev_ctx, PROPERTY_ENABLE);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -263,7 +263,7 @@ int Lps22hb::end()
         interrupt_pin->detach_interrupt_callback();
     }
 
-    register_map->set_baro_error(false);
+    data_processor->set_baro_error(false);
     return err;
 }
 
@@ -275,14 +275,14 @@ int Lps22hb::process_fifo_data()
     err = lps22hb_fifo_data_level_get(dev_ctx, &data_level);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
     err = lps22hb_fifo_output_data_burst_get(dev_ctx, fifo_buffer, data_level);
     if (err != E_NO_ERROR)
     {
-        register_map->set_baro_error(true);
+        data_processor->set_baro_error(true);
         return err;
     }
 
@@ -311,10 +311,10 @@ int Lps22hb::process_fifo_data()
     avg_pressure += modulo_avg_pressure / data_level;
     avg_temperature += modulo_avg_temperature / data_level;
 
-    register_map->set_baro_pressure(avg_pressure);
-    register_map->set_baro_temperature(avg_temperature);
+    data_processor->set_baro_pressure(avg_pressure);
+    data_processor->set_baro_temperature(avg_temperature);
 
-    register_map->set_baro_error(false);
+    data_processor->set_baro_error(false);
     return err;
 }
 
