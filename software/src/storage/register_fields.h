@@ -4,7 +4,7 @@
 
 namespace storage
 {
-namespace register_types
+namespace register_fields
 {
 
 typedef struct 
@@ -52,27 +52,5 @@ typedef union
     uint8_t         byte;
 } register_types_u;
 
-
-} // namespace register_types
-
-#define SENSOR_FUSION_SENSOR_ERRORS    0x00
-#define SENSOR_FUSION_DATA_READY       0x01
-#define SENSOR_FUSION_RED_LED          0x02
-
-#define SENSOR_FUSION_BARO_PRESSURE_XL 0x03
-#define SENSOR_FUSION_BARO_PRESSURE_L  0x04
-#define SENSOR_FUSION_BARO_PRESSURE_H  0x05
-
-#define SENSOR_FUSION_BARO_TEMP_L      0x06
-#define SENSOR_FUSION_BARO_TEMP_H      0x07
-
-typedef struct __attribute__((packed))
-{
-    register_types::sensor_errors_t sensor_errors;
-    register_types::data_ready_t data_ready;
-    register_types::red_led_t red_led;
-    uint8_t baro_pressure[3];
-    int16_t baro_temp;
-} register_map_t;
-
+} // namespace register_fields
 } // namespace storage

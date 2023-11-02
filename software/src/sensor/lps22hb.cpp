@@ -59,9 +59,6 @@ int Lps22hb::begin(uint8_t i2c_address, bool debug, io::pin::Input* interrupt_pi
 
     if (init_done) return err;
 
-    err = data_processor->begin();
-    if (err != E_NO_ERROR) return err;
-
     i2c_device = new io::i2c::I2cDevice(i2c_address, debug);
     err = i2c_device->begin();
     if (err != E_NO_ERROR)
@@ -310,9 +307,7 @@ int Lps22hb::process_fifo_data()
 
     avg_pressure += modulo_avg_pressure / data_level;
     avg_temperature += modulo_avg_temperature / data_level;
-
-    data_processor->set_baro_pressure(avg_pressure);
-    data_processor->set_baro_temperature(avg_temperature);
+    data_processor->set_baro_data(avg_pressure, avg_temperature);
 
     data_processor->set_baro_error(false);
     return err;

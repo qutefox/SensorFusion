@@ -122,7 +122,9 @@
         "limits": "cpp",
         "typeinfo": "cpp",
         "cstring": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "ratio": "cpp",
+        "buffer": "cpp"
     }
 }
 

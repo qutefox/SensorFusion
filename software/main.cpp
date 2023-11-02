@@ -12,8 +12,6 @@
 #include "src/io/input_pin.h"
 #include "src/io/i2c_slave.h"
 
-#include "src/storage/register_map_reader_writer.h"
-
 // #include "src/sensor/lis2mdl-pid/lis2mdl_reg.h"
 #include "src/sensor/lps22hb.h"
 // #include "src/sensor/lsm6dsm-pid/lsm6dsm_reg.h"
@@ -23,8 +21,6 @@
 int main()
 {
 	debug_print("\n\nMAX32660 started with debug info.\n");
-	
-	storage::RegisterMapReaderWriter* register_map_rw = storage::RegisterMapReaderWriter::get_instance();
 
 	io::pin::Output red_led(MXC_GPIO0, LED_PIN_MASK);
 	DataProcessor* data_processor = DataProcessor::get_instance();
@@ -34,8 +30,6 @@ int main()
 	sensor::Lps22hb* lps22hb = sensor::Lps22hb::get_instance();
 
 	__enable_irq();
-
-	data_processor->begin();
 
 	if(i2c_slave->begin() != E_NO_ERROR)
 	{
@@ -48,23 +42,13 @@ int main()
 		debug_print("Failed to initalise lps22hb sensor.\n");
 	}
 
-	uint8_t reg_addr, reg_changed_bits, reg_new_value;
 	while (true)
 	{
 		// Ideal would be if we could go to sleep here and an interrupt would wake us up.
 
 		// Changes are made in an interrupt handler where we cannot process them.
-		// So we are posting them into the data processor in our main thread.
-		
-		while(register_map_rw->get_next_written_reg(reg_addr, reg_changed_bits, reg_new_value))
-		{
-			data_processor->handle_register_written_bits(reg_addr, reg_changed_bits, reg_new_value);
-		}
-
-		while(register_map_rw->get_next_read_reg(reg_addr))
-		{
-			data_processor->handle_register_read(reg_addr);
-		}
+		// So we process them in the data processor.
+		data_processor->update_register_map();
     }
 
     return E_NO_ERROR;

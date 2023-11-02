@@ -5,6 +5,7 @@
 #include "nvic_table.h"
 
 #include "src/sensor_fusion_board.h"
+#include "src/data_processor.h"
 #include "src/debug_print.h"
 
 namespace io
@@ -18,7 +19,7 @@ uint32_t I2cSlave::lock = 0;
 I2cSlave::I2cSlave()
 	: init_done{ false }
 	, transaction_done{ false }
-	, register_map_rw{ storage::RegisterMapReaderWriter::get_instance() }
+	, register_map{ DataProcessor::get_instance()->get_register_map() }
 {
 
 }
@@ -170,7 +171,7 @@ int I2cSlave::event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, vo
 void I2cSlave::send_data()
 {
 	// Read address check is built into the read.
-	tx_byte = register_map_rw->read(address);
+	register_map->read(address, tx_byte, true);
 	address += MXC_I2C_WriteTXFIFO(I2C_SLAVE, &tx_byte, 1);
 }
 
@@ -207,7 +208,7 @@ void I2cSlave::store_data()
 	if (num_rx == 0) return;
 
 	// Write bytes from buffer. Write address check is built into write.
-	address += register_map_rw->write(address, &rx_buf[I2C_SLAVE_ADDR_SIZE], num_rx);
+	address += register_map->write(address, &rx_buf[I2C_SLAVE_ADDR_SIZE], num_rx, true, true);
 }
 
 void I2cSlave::transaction_complete(int err)
