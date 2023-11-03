@@ -5,6 +5,8 @@
 #include "mxc_lock.h"
 #include "uart.h"
 
+#include "src/sensor/lps22hb.h"
+#include "src/sensor/lsm6dsm.h"
 #include "src/debug_print.h"
 
 SensorFusionBoard* SensorFusionBoard::instance = nullptr;
@@ -47,21 +49,31 @@ int SensorFusionBoard::begin()
 
     led_pin = new io::pin::Output(MXC_GPIO0, LED_PIN_MASK);
     err |= led_pin->begin();
-    if (err != E_NO_ERROR) debug_print("led_pin\n");
 
     baro_int_pin = new io::pin::Input(MXC_GPIO0, BARO_INT_MASK);
     err |= baro_int_pin->begin();
-    if (err != E_NO_ERROR) debug_print("baro_int_pin\n");
+
+    mag_int_pin = new io::pin::Input(MXC_GPIO0, MAG_INT_MASK);
+    err |= baro_int_pin->begin();
+
+    gyro_int_pin = new io::pin::Input(MXC_GPIO0, GYRO_INT_MASK);
+    err |= baro_int_pin->begin();
+
+    accel_int_pin = new io::pin::Input(MXC_GPIO0, ACCEL_INT_MASK);
+    err |= baro_int_pin->begin();
 
     i2c_slave = io::i2c::I2cSlave::get_instance();
     err |= i2c_slave->begin();
-    if (err != E_NO_ERROR) debug_print("i2c_slave\n");
 
-    lps22hb_sensor = sensor::Lps22hb::get_instance();
-    err |= lps22hb_sensor->begin(LPS22HB_I2C_ADDR, false, baro_int_pin);
-    if (err != E_NO_ERROR) debug_print("lps22hb_sensor\n");
+    lps22hb_sensor = sensor::Lps22hb::get_instance(LPS22HB_I2C_ADDR, false, baro_int_pin);
+    err |= lps22hb_sensor->begin();
 
-    if (err == E_NO_ERROR) init_done = true;
+    lsm6dsm_sensor = sensor::Lsm6dsm::get_instance(LSM6DSM_I2C_ADDR, false, gyro_int_pin, accel_int_pin);
+    err |= lsm6dsm_sensor->begin();
+
+    lis2mdl_sensor = nullptr;
+
+    init_done = true;
     return err;
 }
 

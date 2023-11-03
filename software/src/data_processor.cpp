@@ -63,11 +63,8 @@ DataProcessor* DataProcessor::get_instance()
 
 int DataProcessor::begin()
 {
-    int err = E_NO_ERROR;
-    if (init_done) return err;
-    err = board->begin();
-    if (err == E_NO_ERROR) init_done = true;
-    return err;
+    init_done = true;
+    return E_NO_ERROR;
 }
 
 storage::MultiRegisterInterface<uint8_t, uint8_t>* DataProcessor::get_register_map() const
@@ -98,6 +95,7 @@ void DataProcessor::update_register_map()
         switch(addr)
         {
         case 2:
+        
             board->get_led_pin()->set(reg.led.state);
             break;
         }
@@ -118,7 +116,7 @@ void DataProcessor::set_baro_data(int32_t pressure, int16_t temperature)
         data_ready_register->write(reg.byte, false, false);
     }
 
-    debug_print("set_baro_data done.\n");
+    // debug_print("set_baro_data done.\n");
 
     // TODO: update sensor fusion.
 }

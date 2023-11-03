@@ -4,20 +4,15 @@
 
 #include "sensor_base.h"
 
-// Forward declare types.
-struct _lps22hb_fifo_output_data_t;
-typedef _lps22hb_fifo_output_data_t lps22hb_fifo_output_data_t;
-
 namespace sensor
 {
 
-class Lps22hb : public SensorBase
+class Lsm6dsm : public SensorBase
 {
 private:
-    static Lps22hb* instance;
+    static Lsm6dsm* instance;
     static uint32_t lock;
 
-    lps22hb_fifo_output_data_t* fifo_buffer = nullptr;
 
     virtual int reset() override;
     virtual inline void set_sensor_error1(bool value) override;
@@ -25,22 +20,21 @@ private:
     virtual bool is_device_id_valid() override;
 
 protected:
-    Lps22hb(uint8_t i2c_address, bool i2c_debug=false,
+    Lsm6dsm(uint8_t i2c_address, bool i2c_debug=false,
         io::pin::Input* interrupt_pin1=nullptr, io::pin::Input* interrupt_pin2=nullptr);
-    virtual ~Lps22hb();
+    virtual ~Lsm6dsm();
 
 public:
-    Lps22hb(Lps22hb& other) = delete;
-    void operator=(const Lps22hb& other) = delete;
+    Lsm6dsm(Lsm6dsm& other) = delete;
+    void operator=(const Lsm6dsm& other) = delete;
 
-    static Lps22hb* get_instance(uint8_t i2c_address, bool i2c_debug=false,
-        io::pin::Input* interrupt_pin=nullptr);
+    static Lsm6dsm* get_instance(uint8_t i2c_address, bool i2c_debug=false,
+        io::pin::Input* interrupt_pin1=nullptr, io::pin::Input* interrupt_pin2=nullptr);
 
     virtual int begin() override;
     virtual int end() override;
     virtual int handle_interrupt1() override;
     virtual int handle_interrupt2() override;
 };
-
 
 } // namespace sensor

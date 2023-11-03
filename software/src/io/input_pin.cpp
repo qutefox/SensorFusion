@@ -30,9 +30,14 @@ int Input::attach_interrupt_callback(mxc_gpio_callback_fn func, void* cbdata, mx
 {
     MXC_GPIO_RegisterCallback(&gpio, func, cbdata);
     int err = MXC_GPIO_IntConfig(&gpio, pol);
-    if (err != E_NO_ERROR) return err;
+    if (err != E_NO_ERROR)
+    {
+        set_wake_up_enable(false);
+        return err;
+    }
     MXC_GPIO_EnableInt(gpio.port, gpio.mask);
     NVIC_EnableIRQ((IRQn_Type) MXC_GPIO_GET_IRQ(MXC_GPIO_GET_IDX(gpio.port)));
+    set_wake_up_enable(true);
     return E_NO_ERROR;
 }
 
@@ -40,6 +45,7 @@ void Input::detach_interrupt_callback()
 {
     MXC_GPIO_DisableInt(gpio.port, gpio.mask);
     NVIC_DisableIRQ((IRQn_Type) MXC_GPIO_GET_IRQ(MXC_GPIO_GET_IDX(gpio.port)));
+    set_wake_up_enable(false);
 }
 
 void Input::set_wake_up_enable(bool enabled)
