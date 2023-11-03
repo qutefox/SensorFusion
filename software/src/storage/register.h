@@ -3,13 +3,13 @@
 #include <cstdlib>
 #include <functional>
 
-#include "iregister.h"
+#include "register_interface.h"
 
 namespace storage
 {
 
 template<typename RegisterType, typename AddressType>
-class Register : public IRegister<RegisterType, AddressType>
+class Register : public RegisterInterface<RegisterType, AddressType>
 {
 protected:
     RegisterType write_mask = 0;
@@ -59,7 +59,7 @@ public:
 };
 
 template<typename RegisterType, typename AddressType>
-class RegisterWithReadFlag : public IRegister<RegisterType, AddressType>
+class RegisterWithReadFlag : public RegisterInterface<RegisterType, AddressType>
 {
 protected:
     RegisterType write_mask = 0;
@@ -113,7 +113,7 @@ public:
 };
 
 template<typename RegisterType, typename AddressType>
-class RegisterWithReadWriteFlag : public IRegister<RegisterType, AddressType>
+class RegisterWithReadWriteFlag : public RegisterInterface<RegisterType, AddressType>
 {
 protected:
     RegisterType write_mask = 0;
@@ -175,7 +175,7 @@ public:
 };
 
 template<typename RegisterType, typename AddressType>
-class RegisterWithWriteFlag : public IRegister<RegisterType, AddressType>
+class RegisterWithWriteFlag : public RegisterInterface<RegisterType, AddressType>
 {
 protected:
     RegisterType write_mask = 0;
@@ -233,20 +233,20 @@ public:
 };
 
 template<typename RegisterType, typename N>
-class MultiRegister : public IMultiRegister<RegisterType, N>
+class MultiRegister : public MultiRegisterInterface<RegisterType, N>
 {
 protected:
     N length = 0;
     bool has_parent = false;
-    IRegister<RegisterType, N>** registers = nullptr;
+    RegisterInterface<RegisterType, N>** registers = nullptr;
 
 public:
-    MultiRegister(N length, bool has_parent, std::function<void(IRegister<RegisterType, N>** registers, N length)> initaliser_func)
+    MultiRegister(N length, bool has_parent, std::function<void(RegisterInterface<RegisterType, N>** registers, N length)> initaliser_func)
         : length{ length }
         , has_parent{ has_parent }
         , registers{ nullptr }
     {
-        registers = static_cast<IRegister<RegisterType, N>**>(malloc(sizeof(IRegister<RegisterType, N>*) * length));
+        registers = static_cast<RegisterInterface<RegisterType, N>**>(malloc(sizeof(RegisterInterface<RegisterType, N>*) * length));
         for (N i = 0; i < length; ++i)
         {
             registers[i] = nullptr;
@@ -318,7 +318,7 @@ public:
         return false;
     }
 
-    virtual inline IRegister<RegisterType, N>* get_register(N offset) const override
+    virtual inline RegisterInterface<RegisterType, N>* get_register(N offset) const override
     {
         if (offset >= length) return nullptr;
         return registers[offset];

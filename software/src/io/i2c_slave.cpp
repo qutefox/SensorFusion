@@ -26,8 +26,8 @@ I2cSlave::I2cSlave()
 
 I2cSlave::~I2cSlave()
 {
-	NVIC_DisableIRQ(MXC_I2C_GET_IRQ(MXC_I2C_GET_IDX(I2C_SLAVE)));
-	MXC_I2C_Shutdown(I2C_SLAVE);
+	NVIC_DisableIRQ(MXC_I2C_GET_IRQ(I2C_SLAVE));
+	MXC_I2C_Shutdown(MXC_I2C_GET_I2C(I2C_SLAVE));
 	init_done = false;
 }
 
@@ -51,20 +51,20 @@ int I2cSlave::begin()
 	reset_state();
 
 	// Initialise I2C slave
-	err = MXC_I2C_Init(I2C_SLAVE, 0, I2C_SLAVE_ADDR);
+	err = MXC_I2C_Init(MXC_I2C_GET_I2C(I2C_SLAVE), 0, I2C_SLAVE_ADDR);
 	if (err != E_NO_ERROR) return err;
 
-	err = MXC_I2C_SetFrequency(I2C_SLAVE, I2C_SLAVE_SPEED);
+	err = MXC_I2C_SetFrequency(MXC_I2C_GET_I2C(I2C_SLAVE), I2C_SLAVE_SPEED);
 	if (err < 0) return err;
 
-	err = MXC_I2C_SetClockStretching(I2C_SLAVE, 1);
+	err = MXC_I2C_SetClockStretching(MXC_I2C_GET_I2C(I2C_SLAVE), 1);
 	if (err < 0) return err;
 
 	// Enable I2C interrupt
-	MXC_NVIC_SetVector(MXC_I2C_GET_IRQ(MXC_I2C_GET_IDX(I2C_SLAVE)),
+	MXC_NVIC_SetVector(MXC_I2C_GET_IRQ(I2C_SLAVE),
 		[]()
 		{
-			MXC_I2C_AsyncHandler(I2C_SLAVE);
+			MXC_I2C_AsyncHandler(MXC_I2C_GET_I2C(I2C_SLAVE));
 
 			I2cSlave* i2c_slave = I2cSlave::get_instance();
 			if (i2c_slave->is_current_transaction_done())
@@ -72,7 +72,7 @@ int I2cSlave::begin()
 				i2c_slave->prepare_for_next_transaction();
 			}
 		});
-	NVIC_EnableIRQ(MXC_I2C_GET_IRQ(MXC_I2C_GET_IDX(I2C_SLAVE)));
+	NVIC_EnableIRQ(MXC_I2C_GET_IRQ(I2C_SLAVE));
 
 	err = prepare_for_next_transaction();
 	if (err != E_NO_ERROR) return err;
@@ -92,7 +92,7 @@ int I2cSlave::prepare_for_next_transaction()
 {
 	transaction_done = false;
 
-	return MXC_I2C_SlaveTransactionAsync(I2C_SLAVE,
+	return MXC_I2C_SlaveTransactionAsync(MXC_I2C_GET_I2C(I2C_SLAVE),
 		[](mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, void* retVal)->int
 		{
 			I2cSlave* i2c_slave = I2cSlave::get_instance();
@@ -105,7 +105,7 @@ int I2cSlave::event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, vo
 	int err = *static_cast<int*>(retVal);
 
 	// Check for valid params
-    if (i2c != I2C_SLAVE)
+    if (i2c != MXC_I2C_GET_I2C(I2C_SLAVE))
 	{
         return E_INVALID;
     }
@@ -172,24 +172,24 @@ void I2cSlave::send_data()
 {
 	// Read address check is built into the read.
 	register_map->read(address, tx_byte, true);
-	address += MXC_I2C_WriteTXFIFO(I2C_SLAVE, &tx_byte, 1);
+	address += MXC_I2C_WriteTXFIFO(MXC_I2C_GET_I2C(I2C_SLAVE), &tx_byte, 1);
 }
 
 void I2cSlave::receive_data()
 {
-	int rx_avail = MXC_I2C_GetRXFIFOAvailable(I2C_SLAVE);
+	int rx_avail = MXC_I2C_GetRXFIFOAvailable(MXC_I2C_GET_I2C(I2C_SLAVE));
 	if (rx_avail == 0) return;
 
 	// Check whether receive buffer will overflow.
 	if ((rx_avail + num_rx) > static_cast<int>(I2C_SLAVE_RX_BUF_SIZE))
 	{
 		overflow = true;
-		rx_avail -= MXC_I2C_ReadRXFIFO(I2C_SLAVE, &rx_buf[num_rx], I2C_SLAVE_RX_BUF_SIZE - num_rx);
+		rx_avail -= MXC_I2C_ReadRXFIFO(MXC_I2C_GET_I2C(I2C_SLAVE), &rx_buf[num_rx], I2C_SLAVE_RX_BUF_SIZE - num_rx);
 		num_rx = I2C_SLAVE_ADDR_SIZE;
 	}
 
 	// Read remaining characters in FIFO.
-	num_rx += MXC_I2C_ReadRXFIFO(I2C_SLAVE, &rx_buf[num_rx], rx_avail);
+	num_rx += MXC_I2C_ReadRXFIFO(MXC_I2C_GET_I2C(I2C_SLAVE), &rx_buf[num_rx], rx_avail);
 }
 
 void I2cSlave::store_data()
@@ -225,7 +225,7 @@ void I2cSlave::transaction_complete(int err)
 		}
 		else // Read operation:
 		{
-			while(I2C_SLAVE->status & MXC_F_I2C_STATUS_BUSY) { }
+			while(MXC_I2C_GET_I2C(I2C_SLAVE)->status & MXC_F_I2C_STATUS_BUSY) { }
 		}
 	}
 

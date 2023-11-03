@@ -26,6 +26,7 @@ protected:
 
 public:
     I2cDevice(uint8_t address, bool debug = false);
+    virtual ~I2cDevice();
 
     int begin();
 

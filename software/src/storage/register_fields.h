@@ -25,7 +25,7 @@ typedef struct
     uint8_t accel_error : 1;
     uint8_t mag_error   : 1;
     uint8_t baro_error  : 1;
-    uint8_t not_used    : 4;
+    uint8_t             : 4;
 } sensor_errors_t;
 
 typedef struct
@@ -34,20 +34,20 @@ typedef struct
     uint8_t accel_data_ready : 1;
     uint8_t mag_data_ready   : 1;
     uint8_t baro_data_ready  : 1;
-    uint8_t not_used         : 4;
+    uint8_t                  : 4;
 } data_ready_t;
 
 typedef struct
 {
-    uint8_t state    : 1;
-    uint8_t not_used : 7;
-} red_led_t;
+    uint8_t state : 1;
+    uint8_t       : 7;
+} led_t;
 
 typedef union
 {
     sensor_errors_t sensor_errors;
     data_ready_t    data_ready;
-    red_led_t       red_led;
+    led_t           led;
     bitwise_t       bitwise;
     uint8_t         byte;
 } register_types_u;

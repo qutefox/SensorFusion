@@ -3,18 +3,11 @@
 #include "mxc_device.h"
 #include "i2c.h"
 
-#include "src/storage/iregister.h"
+#include "src/storage/register_interface.h"
 
 #define I2C_SLAVE_MAX_DATA_RX 64
 #define I2C_SLAVE_ADDR_SIZE sizeof(uint8_t)
 #define I2C_SLAVE_RX_BUF_SIZE (I2C_SLAVE_MAX_DATA_RX + I2C_SLAVE_ADDR_SIZE)
-
-namespace storage
-{
-
-class RegisterMap; // Forward declare.
-
-} // namespace storage
 
 namespace io
 {
@@ -35,7 +28,7 @@ private:
     uint8_t tx_byte = 0;
 	bool overflow; // Rx buffer overflowed during transaction
     volatile bool transaction_done = false;
-    storage::IMultiRegister<uint8_t, uint8_t>* register_map;
+    storage::MultiRegisterInterface<uint8_t, uint8_t>* register_map;
 
     int event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, void* retVal);
 
@@ -48,7 +41,7 @@ private:
 
 protected:
     I2cSlave();
-    ~I2cSlave();
+    virtual ~I2cSlave();
 
 public:
     I2cSlave(I2cSlave& other) = delete;

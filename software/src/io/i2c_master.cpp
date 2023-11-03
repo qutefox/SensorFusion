@@ -1,6 +1,7 @@
 #include "i2c_master.h"
 
 #include "mxc_delay.h"
+#include "mxc_errors.h"
 #include "mxc_lock.h"
 
 #include "src/debug_print.h"
@@ -22,7 +23,7 @@ I2cMaster::I2cMaster()
 
 I2cMaster::~I2cMaster()
 {
-    MXC_I2C_Shutdown(I2C_MASTER);
+    MXC_I2C_Shutdown(MXC_I2C_GET_I2C(I2C_MASTER));
     init_done = false;
 }
 
@@ -43,13 +44,13 @@ int I2cMaster::begin()
 
     if (init_done) return err;
 
-    err = MXC_I2C_Init(I2C_MASTER, 1, 0);
+    err = MXC_I2C_Init(MXC_I2C_GET_I2C(I2C_MASTER), 1, 0);
     if (err != E_NO_ERROR) return err;
 
-    err = MXC_I2C_SetFrequency(I2C_MASTER, I2C_MASTER_SPEED);
+    err = MXC_I2C_SetFrequency(MXC_I2C_GET_I2C(I2C_MASTER), I2C_MASTER_SPEED);
     if (err < 0) return err;
 
-    err = MXC_I2C_SetClockStretching(I2C_MASTER, I2C_MASTER_CLOCK_STRETCHING);
+    err = MXC_I2C_SetClockStretching(MXC_I2C_GET_I2C(I2C_MASTER), I2C_MASTER_CLOCK_STRETCHING);
     if (err != E_NO_ERROR) return err;
 
     init_done = true;
@@ -59,7 +60,7 @@ int I2cMaster::begin()
 void I2cMaster::scan()
 {
     mxc_i2c_req_t req;
-    req.i2c = I2C_MASTER;
+    req.i2c = MXC_I2C_GET_I2C(I2C_MASTER);
     req.addr = 0;
     req.tx_buf = NULL;
     req.tx_len = 0;
@@ -88,7 +89,7 @@ void I2cMaster::scan()
 
 int I2cMaster::transfer(mxc_i2c_req_t* req, uint8_t* tx_data, unsigned int tx_size, uint8_t* rx_data, unsigned int rx_size)
 {
-    req->i2c = I2C_MASTER;
+    req->i2c = MXC_I2C_GET_I2C(I2C_MASTER);
     req->tx_buf = tx_data; // Write data buffer
     req->tx_len = tx_size; // Number of bytes to write
     req->rx_buf = rx_data; // Read data buffer
@@ -98,7 +99,7 @@ int I2cMaster::transfer(mxc_i2c_req_t* req, uint8_t* tx_data, unsigned int tx_si
 
 int I2cMaster::recover()
 {
-    return MXC_I2C_Recover(I2C_MASTER, 16);
+    return MXC_I2C_Recover(MXC_I2C_GET_I2C(I2C_MASTER), 16);
 }
 
 } // namespace i2c

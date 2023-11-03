@@ -2,6 +2,7 @@
 
 #include "src/io/i2c_device.h"
 #include "src/io/input_pin.h"
+#include "src/data_processor_interface.h"
 
 // I do not wish to include "src/sensor/lps22hb-pid/lps22hb_reg.h" here.
 // I would like to only forward declare the absolute minimum stuff.
@@ -17,9 +18,6 @@ typedef _lps22hb_fifo_output_data_t lps22hb_fifo_output_data_t;
 // it is enough for the compiler to know that these exist and the
 // size of them can be unknown.
 
-
-class DataProcessor; // Forward declare.
-
 namespace sensor
 {
 
@@ -34,11 +32,11 @@ private:
     lps22hb_fifo_output_data_t* fifo_buffer = nullptr;
     io::pin::Input* interrupt_pin = nullptr;
     io::i2c::I2cDevice* i2c_device = nullptr;
-    DataProcessor* data_processor;
+    DataProcessorInterface* data_processor;
 
 protected:
     Lps22hb();
-    ~Lps22hb();
+    virtual ~Lps22hb();
 
 public:
     Lps22hb(Lps22hb& other) = delete;

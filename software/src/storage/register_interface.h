@@ -6,7 +6,7 @@ namespace storage
 {
 
 template<typename RegisterType, typename AddressType>
-class IRegister
+class RegisterInterface
 {
     static_assert(std::is_integral<RegisterType>::value, "Wrong argument type. Only numeric types are accepted for register type.");
     static_assert(!std::is_same<RegisterType, bool>::value, "Wrong argument type. Bool is not accepted for register type.");
@@ -15,8 +15,8 @@ class IRegister
     static_assert(std::is_unsigned<AddressType>::value, "Wrong argument type. Only unsigned types are accepted for address tpye.");
 
 public:
-    IRegister() { }
-    virtual ~IRegister() { }
+    RegisterInterface() { }
+    virtual ~RegisterInterface() { }
 
     virtual inline bool get_read_flag() const = 0;
     virtual inline RegisterType get_written_bit_mask() = 0;
@@ -29,11 +29,11 @@ public:
 };
 
 template<typename RegisterType, typename AddressType>
-class IMultiRegister : public IRegister<RegisterType, AddressType>
+class MultiRegisterInterface : public RegisterInterface<RegisterType, AddressType>
 {
 public:
-    IMultiRegister() { }
-    virtual ~IMultiRegister() { }
+    MultiRegisterInterface() { }
+    virtual ~MultiRegisterInterface() { }
 
     virtual inline void read(RegisterType* buffer, bool mark_read=true) = 0;
     virtual inline bool read(AddressType offset, RegisterType& value, bool mark_read=true) = 0;
@@ -43,7 +43,7 @@ public:
     virtual inline bool write(AddressType offset, RegisterType value, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
     virtual inline bool write(AddressType offset, RegisterType* buffer, AddressType length, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
 
-    virtual inline IRegister<RegisterType, AddressType>* get_register(AddressType offset) const = 0;
+    virtual inline RegisterInterface<RegisterType, AddressType>* get_register(AddressType offset) const = 0;
 
     virtual inline bool get_read_flag(bool& read_flag, AddressType offset) = 0;
     virtual inline bool get_written_bit_mask(RegisterType& written_bit_mask, AddressType offset) = 0;

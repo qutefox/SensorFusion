@@ -18,6 +18,11 @@ I2cDevice::I2cDevice(uint8_t address, bool _debug)
     debug = false;
 }
 
+I2cDevice::~I2cDevice()
+{
+
+}
+
 int I2cDevice::begin()
 {
     return i2c_master->begin();

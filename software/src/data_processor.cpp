@@ -11,10 +11,11 @@ DataProcessor* DataProcessor::instance = nullptr;
 uint32_t DataProcessor::lock = 0;
 
 DataProcessor::DataProcessor()
-    : red_led{ nullptr }
+    : init_done{ false }
+    , board{ SensorFusionBoard::get_instance() }
 {
     auto make_registers_with_read_flag =
-        [](storage::IRegister<uint8_t, uint8_t>** registers, uint8_t length)
+        [](storage::RegisterInterface<uint8_t, uint8_t>** registers, uint8_t length)
         {
             for (uint8_t i = 0 ; i < length ; ++i)
             {
@@ -24,12 +25,12 @@ DataProcessor::DataProcessor()
 
     sensor_error_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
     data_ready_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
-    led_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x01, 0x00);
+    led_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0xFF, 0x00);
     baro_pressure_registers = new storage::MultiRegister<uint8_t, uint8_t>(3, true, make_registers_with_read_flag);
     baro_temperature_registers = new storage::MultiRegister<uint8_t, uint8_t>(2, true, make_registers_with_read_flag);
 
     register_map = new storage::MultiRegister<uint8_t, uint8_t>(8, false,
-        [this](storage::IRegister<uint8_t, uint8_t>** registers, uint8_t length)
+        [this](storage::RegisterInterface<uint8_t, uint8_t>** registers, uint8_t length)
         {
             uint8_t idx = 0;
             registers[idx++] = sensor_error_register;
@@ -60,14 +61,18 @@ DataProcessor* DataProcessor::get_instance()
     return instance;
 }
 
-storage::IMultiRegister<uint8_t, uint8_t>* DataProcessor::get_register_map() const
+int DataProcessor::begin()
 {
-    return register_map;
+    int err = E_NO_ERROR;
+    if (init_done) return err;
+    err = board->begin();
+    if (err == E_NO_ERROR) init_done = true;
+    return err;
 }
 
-void DataProcessor::set_red_led_instance(io::pin::Output* _red_led)
+storage::MultiRegisterInterface<uint8_t, uint8_t>* DataProcessor::get_register_map() const
 {
-    red_led = _red_led;
+    return register_map;
 }
 
 void DataProcessor::update_register_map()
@@ -88,6 +93,14 @@ void DataProcessor::update_register_map()
 	{
         debug_print("register changed: addr=%02X, written_bit_mask=%02X, new_value=%02X.\n", addr, written_bit_mask, new_value);
 
+        reg.byte = new_value;
+
+        switch(addr)
+        {
+        case 2:
+            board->get_led_pin()->set(reg.led.state);
+            break;
+        }
         // TODO: react to received data/change.
     }
 }
@@ -105,10 +118,12 @@ void DataProcessor::set_baro_data(int32_t pressure, int16_t temperature)
         data_ready_register->write(reg.byte, false, false);
     }
 
+    debug_print("set_baro_data done.\n");
+
     // TODO: update sensor fusion.
 }
 
-void DataProcessor::set_gyro_error(bool error)
+void DataProcessor::set_gyro_sensor_error(bool error)
 {
     storage::register_fields::register_types_u reg;
     sensor_error_register->read(reg.byte, false);
@@ -116,7 +131,7 @@ void DataProcessor::set_gyro_error(bool error)
     sensor_error_register->write(reg.byte, false, false);
 }
 
-void DataProcessor::set_accel_error(bool error)
+void DataProcessor::set_accel_sensor_error(bool error)
 {
     storage::register_fields::register_types_u reg;
     sensor_error_register->read(reg.byte, false);
@@ -124,7 +139,7 @@ void DataProcessor::set_accel_error(bool error)
     sensor_error_register->write(reg.byte, false, false);
 }
 
-void DataProcessor::set_mag_error(bool error)
+void DataProcessor::set_mag_sensor_error(bool error)
 {
     storage::register_fields::register_types_u reg;
     sensor_error_register->read(reg.byte, false);
@@ -132,7 +147,7 @@ void DataProcessor::set_mag_error(bool error)
     sensor_error_register->write(reg.byte, false, false);
 }
 
-void DataProcessor::set_baro_error(bool error)
+void DataProcessor::set_baro_sensor_error(bool error)
 {
     storage::register_fields::register_types_u reg;
     sensor_error_register->read(reg.byte, false);
@@ -140,7 +155,7 @@ void DataProcessor::set_baro_error(bool error)
     sensor_error_register->write(reg.byte, false, false);
 }
 
-bool DataProcessor::is_in_sensor_error() const
+bool DataProcessor::has_sensor_error() const
 {
     storage::register_fields::register_types_u reg;
     sensor_error_register->read(reg.byte, false);

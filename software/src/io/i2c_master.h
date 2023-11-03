@@ -18,7 +18,7 @@ private:
 
 protected:
     I2cMaster();
-    ~I2cMaster();
+    virtual ~I2cMaster();
 
 public:
     I2cMaster(I2cMaster& other) = delete;

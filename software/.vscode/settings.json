@@ -124,7 +124,10 @@
         "cstring": "cpp",
         "cinttypes": "cpp",
         "ratio": "cpp",
-        "buffer": "cpp"
+        "buffer": "cpp",
+        "chrono": "cpp",
+        "ctime": "cpp",
+        "netfwd": "cpp"
     }
 }
 
