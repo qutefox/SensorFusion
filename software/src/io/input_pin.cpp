@@ -16,6 +16,8 @@ Input::Input(mxc_gpio_regs_t *pin_port, uint32_t pin_mask, mxc_gpio_pad_t pullup
 
 int Input::begin()
 {
+    // TODO: Sometimes (especially after programmer reset) MXC_GPIO_Config fails with E_BAD_PARAM.
+    // Maybe when MXC_GPIO_Config fails, we should try to reset then configure it again?
     return MXC_GPIO_Config(&gpio);
 }
 

@@ -21,7 +21,6 @@ private:
 
     virtual int reset() override;
     virtual inline void set_sensor_error1(bool value) override;
-    virtual inline void set_sensor_error2(bool value) override;
     virtual bool is_device_id_valid() override;
 
 protected:
@@ -38,8 +37,8 @@ public:
 
     virtual int begin() override;
     virtual int end() override;
-    virtual int handle_interrupt1() override;
-    virtual int handle_interrupt2() override;
+    virtual int set_power_mode(PowerMode power_mode) override;
+    virtual inline int handle_interrupt1() override;
 };
 
 

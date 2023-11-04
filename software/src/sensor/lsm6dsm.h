@@ -33,8 +33,9 @@ public:
 
     virtual int begin() override;
     virtual int end() override;
-    virtual int handle_interrupt1() override;
-    virtual int handle_interrupt2() override;
+    virtual int set_power_mode(PowerMode power_mode) override;
+    virtual inline int handle_interrupt1() override;
+    virtual inline int handle_interrupt2() override;
 };
 
 } // namespace sensor

@@ -22,8 +22,8 @@
 
 #define BARO_INT_MASK MXC_GPIO_PIN_4
 #define MAG_INT_MASK MXC_GPIO_PIN_5
-#define GYRO_INT_MASK MXC_GPIO_PIN_6
-#define ACCEL_INT_MASK MXC_GPIO_PIN_7
+#define INERTIAL_INT2_MASK MXC_GPIO_PIN_6
+#define INERTIAL_INT1_MASK MXC_GPIO_PIN_7
 #define HOSTINT_PIN_MASK MXC_GPIO_PIN_10
 #define LED_PIN_MASK MXC_GPIO_PIN_12
 #define WAKE_PIN_MASK MXC_GPIO_PIN_13
@@ -38,8 +38,8 @@ private:
     io::pin::Output* led_pin = nullptr;
     io::pin::Input* baro_int_pin = nullptr;
     io::pin::Input* mag_int_pin = nullptr;
-    io::pin::Input* gyro_int_pin = nullptr;
-    io::pin::Input* accel_int_pin = nullptr;
+    io::pin::Input* inertial_int1_pin = nullptr;
+    io::pin::Input* inertial_int2_pin = nullptr;
     io::i2c::I2cSlave* i2c_slave = nullptr;
     sensor::SensorInterface* lps22hb_sensor = nullptr;
     sensor::SensorInterface* lsm6dsm_sensor = nullptr;

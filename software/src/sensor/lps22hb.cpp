@@ -36,21 +36,13 @@ Lps22hb* Lps22hb::get_instance(uint8_t i2c_address, bool i2c_debug, io::pin::Inp
 int Lps22hb::reset()
 {
     int err = lps22hb_reset_set(dev_ctx, PROPERTY_ENABLE);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
+    if (err != E_NO_ERROR) return err;
 
-    uint8_t rst;
+    uint8_t rst = 1;
     do
     {
         err = lps22hb_reset_get(dev_ctx, &rst);
-        if (err != E_NO_ERROR)
-        {
-            set_sensor_error1(true);
-            return err;
-        }
+        if (err != E_NO_ERROR) return err;
     }
     while(rst);
     return err;
@@ -61,162 +53,94 @@ void Lps22hb::set_sensor_error1(bool value)
     data_processor->set_baro_sensor_error(value);
 }
 
-void Lps22hb::set_sensor_error2(bool value)
-{
-}
-
 bool Lps22hb::is_device_id_valid()
 {
     uint8_t whoami = 0;
     int err = lps22hb_device_id_get(dev_ctx, &whoami);
-    if (err != E_NO_ERROR || whoami != LPS22HB_ID)
-    {
-        set_sensor_error1(true);
-        return false;
-    }
+    if (err != E_NO_ERROR || whoami != LPS22HB_ID) return false;
     return true;
 }
 
 int Lps22hb::begin()
 {
     int err = E_NO_ERROR;
-
     if (init_done) return err;
-
-    err = reset();
-    if (err != E_NO_ERROR)
+    err |= reset();
+    if(!is_device_id_valid())
     {
-        set_sensor_error1(true);
-        return err;
+        set_sensor_error1(E_NO_DEVICE);
+        return E_NO_DEVICE;
     }
-
-    if(!is_device_id_valid()) return E_NO_DEVICE;
-
-    err = set_interrupt1_handler();
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
+    // Configure interrupt handler.
+    err |= attach_interrupt1_handler(true);
     // Enable block data update.
-    err = lps22hb_block_data_update_set(dev_ctx, PROPERTY_ENABLE);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
-    // Enable auto increment.
-    err = lps22hb_auto_add_inc_set(dev_ctx, PROPERTY_ENABLE);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
-    // Set fifo watermark to 16 samples.
-    err = lps22hb_fifo_watermark_set(dev_ctx, 25);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
+    err |= lps22hb_block_data_update_set(dev_ctx, PROPERTY_ENABLE);
+    // Enable i2c address auto increment.
+    err |= lps22hb_auto_add_inc_set(dev_ctx, PROPERTY_ENABLE);
+    // Set fifo watermark to 25 samples.
+    err |= lps22hb_fifo_watermark_set(dev_ctx, 25);
     // Set fifo mode to dynamic stream.
-    err = lps22hb_fifo_mode_set(dev_ctx, LPS22HB_DYNAMIC_STREAM_MODE);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
+    err |= lps22hb_fifo_mode_set(dev_ctx, LPS22HB_DYNAMIC_STREAM_MODE);
     // Enable fifo.
-    err = lps22hb_fifo_set(dev_ctx, PROPERTY_ENABLE);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
+    err |= lps22hb_fifo_set(dev_ctx, PROPERTY_ENABLE);
     // Enable interrupt when data stored in fifo reaches watermark (threshold) level.
-    err = lps22hb_fifo_threshold_on_int_set(dev_ctx, PROPERTY_ENABLE);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
+    err |= lps22hb_fifo_threshold_on_int_set(dev_ctx, PROPERTY_ENABLE);
     // Put data ready or fifo flags on the interrupt pin.
-    err = lps22hb_int_pin_mode_set(dev_ctx, LPS22HB_DRDY_OR_FIFO_FLAGS);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
+    err |= lps22hb_int_pin_mode_set(dev_ctx, LPS22HB_DRDY_OR_FIFO_FLAGS);
     // Set interrupt pin mode to push pull.
-    err = lps22hb_pin_mode_set(dev_ctx, LPS22HB_PUSH_PULL);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
+    err |= lps22hb_pin_mode_set(dev_ctx, LPS22HB_PUSH_PULL);
     // Set interrupt pin polarity to active low.
-    err = lps22hb_int_polarity_set(dev_ctx, LPS22HB_ACTIVE_LOW);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
-    // Set low power.
-    err = lps22hb_low_power_set(dev_ctx, PROPERTY_ENABLE);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
+    err |= lps22hb_int_polarity_set(dev_ctx, LPS22HB_ACTIVE_LOW);
     // Set low pass filter.
-    err = lps22hb_low_pass_filter_mode_set(dev_ctx, LPS22HB_LPF_ODR_DIV_2);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
+    err |= lps22hb_low_pass_filter_mode_set(dev_ctx, LPS22HB_LPF_ODR_DIV_2);
+    // Set power mode.
+    err |= set_power_mode(PowerMode::POWER_DOWN);
 
-    // Set Output Data Rate.
-    err = lps22hb_data_rate_set(dev_ctx, LPS22HB_ODR_25_Hz);
-    if (err != E_NO_ERROR)
-    {
-        set_sensor_error1(true);
-        return err;
-    }
-
-    set_sensor_error1(false);
+    set_sensor_error1(err);
     return err;
 }
 
 int Lps22hb::end()
 {
     int err = E_NO_ERROR;
-
-    reset();
-
-    if(!is_device_id_valid()) return E_NO_DEVICE;
-
-    // Set low power.
-    err = lps22hb_low_power_set(dev_ctx, PROPERTY_ENABLE);
-    if (err != E_NO_ERROR)
+    err |= reset();
+    err |= attach_interrupt1_handler(false);
+    if(!is_device_id_valid())
     {
-        set_sensor_error1(true);
-        return err;
+        set_sensor_error1(E_NO_DEVICE);
+        return E_NO_DEVICE;
+    }
+    err |= set_power_mode(PowerMode::POWER_DOWN);
+    init_done = false;
+    set_sensor_error1(err);
+    return err;
+}
+
+int Lps22hb::set_power_mode(PowerMode power_mode)
+{
+    int err = E_NO_ERROR;
+    switch (power_mode)
+    {
+    default:
+    case PowerMode::POWER_DOWN:
+        err |= lps22hb_low_power_set(dev_ctx, PROPERTY_ENABLE);
+        err |= lps22hb_data_rate_set(dev_ctx, LPS22HB_POWER_DOWN);
+        break;
+    case PowerMode::LOW_POWER:
+        err |= lps22hb_low_power_set(dev_ctx, PROPERTY_ENABLE);
+        err |= lps22hb_data_rate_set(dev_ctx, LPS22HB_ODR_25_Hz);
+        break;
+    case PowerMode::NORMAL:
+        err |= lps22hb_low_power_set(dev_ctx, PROPERTY_DISABLE);
+        err |= lps22hb_data_rate_set(dev_ctx, LPS22HB_ODR_25_Hz);
+        break;
+    case PowerMode::HIGH_PERFORMANCE:
+        err |= lps22hb_low_power_set(dev_ctx, PROPERTY_DISABLE);
+        err |= lps22hb_data_rate_set(dev_ctx, LPS22HB_ODR_50_Hz);
+        break;
     }
 
-    set_sensor_error1(false);
-    init_done = false;
+    set_sensor_error1(err);
     return err;
 }
 
@@ -228,14 +152,14 @@ int Lps22hb::handle_interrupt1()
     err = lps22hb_fifo_data_level_get(dev_ctx, &data_level);
     if (err != E_NO_ERROR)
     {
-        set_sensor_error1(true);
+        set_sensor_error1(err);
         return err;
     }
 
     err = lps22hb_fifo_output_data_burst_get(dev_ctx, fifo_buffer, data_level);
     if (err != E_NO_ERROR)
     {
-        set_sensor_error1(true);
+        set_sensor_error1(err);
         return err;
     }
 
@@ -265,11 +189,6 @@ int Lps22hb::handle_interrupt1()
     avg_temperature += modulo_avg_temperature / data_level;
     data_processor->set_baro_data(avg_pressure, avg_temperature);
 
-    set_sensor_error1(false);
+    set_sensor_error1(err);
     return err;
-}
-
-int Lps22hb::handle_interrupt2()
-{
-
 }

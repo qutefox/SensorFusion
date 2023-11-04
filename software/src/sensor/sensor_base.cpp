@@ -38,56 +38,18 @@ SensorBase::~SensorBase()
     delete dev_ctx;
 }
 
+int SensorBase::begin()
+{
+    int err = E_NO_ERROR;
+    if (init_done) return err;
+    set_sensor_errors(err != E_NO_ERROR);
+    init_done = true;
+    return err;
+}
+
 int SensorBase::end()
 {
-    // Detach interrupt handler.
-    if (interrupt_pin1 != nullptr) interrupt_pin1->detach_interrupt_callback();
-    if (interrupt_pin2 != nullptr) interrupt_pin2->detach_interrupt_callback();
-    return E_NO_ERROR;
-}
-
-void SensorBase::set_interrupt_pin1(io::pin::Input* _interrupt_pin1)
-{
-    interrupt_pin1 = _interrupt_pin1;
-}
-
-void SensorBase::set_interrupt_pin2(io::pin::Input* _interrupt_pin2)
-{
-    interrupt_pin2 = _interrupt_pin2;
-}
-
-int SensorBase::handle_interrupt1()
-{
-
-}
-
-int SensorBase::handle_interrupt2()
-{
-
-}
-
-int SensorBase::set_interrupt1_handler()
-{
-    if (interrupt_pin1 != nullptr)
-    {
-        return interrupt_pin1->attach_interrupt_callback(
-            [](void* this_obj) -> void
-            {
-                static_cast<SensorBase*>(this_obj)->handle_interrupt1();
-            }, this);
-    }
-    return E_NO_ERROR;
-}
-
-int SensorBase::set_interrupt2_handler()
-{
-    if (interrupt_pin2 != nullptr)
-    {
-        return interrupt_pin2->attach_interrupt_callback(
-            [](void* this_obj) -> void
-            {
-                static_cast<SensorBase*>(this_obj)->handle_interrupt2();
-            }, this);
-    }
+    set_sensor_errors(E_NO_ERROR);
+    init_done = false;
     return E_NO_ERROR;
 }

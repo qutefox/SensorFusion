@@ -56,10 +56,10 @@ int SensorFusionBoard::begin()
     mag_int_pin = new io::pin::Input(MXC_GPIO0, MAG_INT_MASK);
     err |= baro_int_pin->begin();
 
-    gyro_int_pin = new io::pin::Input(MXC_GPIO0, GYRO_INT_MASK);
+    inertial_int1_pin = new io::pin::Input(MXC_GPIO0, INERTIAL_INT1_MASK);
     err |= baro_int_pin->begin();
 
-    accel_int_pin = new io::pin::Input(MXC_GPIO0, ACCEL_INT_MASK);
+    inertial_int2_pin = new io::pin::Input(MXC_GPIO0, INERTIAL_INT2_MASK);
     err |= baro_int_pin->begin();
 
     i2c_slave = io::i2c::I2cSlave::get_instance();
@@ -68,8 +68,9 @@ int SensorFusionBoard::begin()
     lps22hb_sensor = sensor::Lps22hb::get_instance(LPS22HB_I2C_ADDR, false, baro_int_pin);
     err |= lps22hb_sensor->begin();
 
-    lsm6dsm_sensor = sensor::Lsm6dsm::get_instance(LSM6DSM_I2C_ADDR, false, gyro_int_pin, accel_int_pin);
+    lsm6dsm_sensor = sensor::Lsm6dsm::get_instance(LSM6DSM_I2C_ADDR, false, inertial_int1_pin, inertial_int2_pin);
     err |= lsm6dsm_sensor->begin();
+    lsm6dsm_sensor->set_power_mode(sensor::PowerMode::LOW_POWER);
 
     lis2mdl_sensor = nullptr;
 
