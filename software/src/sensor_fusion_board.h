@@ -19,6 +19,7 @@
 
 #define LPS22HB_I2C_ADDR 0x5C
 #define LSM6DSM_I2C_ADDR 0x6A
+#define LIS2MDL_I2C_ADDR 0x1E
 
 #define BARO_INT_MASK MXC_GPIO_PIN_4
 #define MAG_INT_MASK MXC_GPIO_PIN_5
@@ -41,9 +42,9 @@ private:
     io::pin::Input* inertial_int1_pin = nullptr;
     io::pin::Input* inertial_int2_pin = nullptr;
     io::i2c::I2cSlave* i2c_slave = nullptr;
-    sensor::SensorInterface* lps22hb_sensor = nullptr;
-    sensor::SensorInterface* lsm6dsm_sensor = nullptr;
-    sensor::SensorInterface* lis2mdl_sensor = nullptr;
+    sensor::SensorInterface* baro_sensor = nullptr;
+    sensor::SensorInterface* inertial_sensor = nullptr;
+    sensor::SensorInterface* mag_sensor = nullptr;
 
 protected:
     SensorFusionBoard();
@@ -58,6 +59,9 @@ public:
     int begin();
 
     io::pin::Output* get_led_pin() const { return led_pin; }
+    sensor::SensorInterface* get_baro_sensor() const { return baro_sensor; }
+    sensor::SensorInterface* get_inertial_sensor() const { return inertial_sensor; }
+    sensor::SensorInterface* get_mag_sensor() const { return mag_sensor; }
 
     void prep_for_sleep();
 };

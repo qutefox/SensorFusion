@@ -13,7 +13,6 @@ private:
     static Lsm6dsm* instance;
     static uint32_t lock;
 
-
     virtual int reset() override;
     virtual inline void set_sensor_error1(bool value) override;
     virtual inline void set_sensor_error2(bool value) override;

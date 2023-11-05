@@ -196,16 +196,9 @@ int Lsm6dsm::set_power_mode(PowerMode power_mode)
     return err || err1 || err2;
 }
 
-typedef union {
-    int16_t i16bit[3];
-    uint8_t u8bit[6];
-} axis3bit16_t;
-
 int Lsm6dsm::handle_interrupt1()
 {
     int err = E_NO_ERROR;
-
-    debug_print("Lsm6dsm -> FIFO interrupt.\n");
 
     axis3bit16_t data_raw_acceleration;
     axis3bit16_t data_raw_angular_rate;

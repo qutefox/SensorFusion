@@ -10,8 +10,8 @@ using namespace sensor;
 Lps22hb* Lps22hb::instance = nullptr;
 uint32_t Lps22hb::lock = 0;
 
-Lps22hb::Lps22hb(uint8_t i2c_address, bool i2c_debug, io::pin::Input* interrupt_pin1, io::pin::Input* interrupt_pin2)
-    : SensorBase(i2c_address, i2c_debug, interrupt_pin1, interrupt_pin2)
+Lps22hb::Lps22hb(uint8_t i2c_address, bool i2c_debug, io::pin::Input* interrupt_pin)
+    : SensorBase(i2c_address, i2c_debug, interrupt_pin1, interrupt_pin)
     , fifo_buffer{ new lps22hb_fifo_output_data_t[32] }
 {
 

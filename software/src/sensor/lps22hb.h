@@ -25,7 +25,7 @@ private:
 
 protected:
     Lps22hb(uint8_t i2c_address, bool i2c_debug=false,
-        io::pin::Input* interrupt_pin1=nullptr, io::pin::Input* interrupt_pin2=nullptr);
+        io::pin::Input* interrupt_pin=nullptr);
     virtual ~Lps22hb();
 
 public:
