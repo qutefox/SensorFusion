@@ -7,3 +7,6 @@
 [submodule "software/src/sensor/lsm6dsm-pid"]
 	path = software/src/sensor/lsm6dsm-pid
 	url = https://github.com/qutefox/lsm6dsm-pid
+[submodule "software/src/Fusion"]
+	path = software/src/Fusion
+	url = https://github.com/xioTechnologies/Fusion
