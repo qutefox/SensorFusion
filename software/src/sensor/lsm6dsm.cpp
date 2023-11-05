@@ -173,7 +173,7 @@ int Lsm6dsm::set_power_mode(PowerMode power_mode)
         err |= lsm6dsm_fifo_data_rate_set(dev_ctx, LSM6DSM_FIFO_DISABLE);
         break;
     case PowerMode::LOW_POWER:
-        // Low power between odrs: 12.5Hz, 26Hz and 52Hz.
+        // Low power for odrs: 12.5Hz, 26Hz and 52Hz.
         err |= lsm6dsm_fifo_data_rate_set(dev_ctx, LSM6DSM_FIFO_52Hz);
         err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_52Hz);
         err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_52Hz);
@@ -219,8 +219,9 @@ int Lsm6dsm::handle_interrupt1()
         lsm6dsm_fifo_raw_data_get(dev_ctx, data_raw_angular_rate.u8bit, 3 * sizeof(int16_t));
         lsm6dsm_fifo_raw_data_get(dev_ctx, data_raw_acceleration.u8bit, 3 * sizeof(int16_t));
 
-        debug_print("gyro %d, %d, %d.\n", data_raw_angular_rate.i16bit[0], data_raw_angular_rate.i16bit[1], data_raw_angular_rate.i16bit[2]);
-        debug_print("acc %d, %d, %d.\n", data_raw_acceleration.i16bit[0], data_raw_acceleration.i16bit[1], data_raw_acceleration.i16bit[2]);
+        // debug_print("gyro %d, %d, %d.\n", data_raw_angular_rate.i16bit[0], data_raw_angular_rate.i16bit[1], data_raw_angular_rate.i16bit[2]);
+        // debug_print("acc %d, %d, %d.\n", data_raw_acceleration.i16bit[0], data_raw_acceleration.i16bit[1], data_raw_acceleration.i16bit[2]);
+        // TODO: update sensor fusion.
     }
 
     set_sensor_errors(err);

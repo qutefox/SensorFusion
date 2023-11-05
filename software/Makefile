@@ -173,6 +173,7 @@ VPATH += src/sensor # Added by Qute
 VPATH += src/sensor/lps22hb-pid # Added by Qute
 VPATH += src/sensor/lsm6dsm-pid # Added by Qute
 VPATH += src/sensor/lis2mdl-pid # Added by Qute
+VPATH += src/fusion # Added by Qute
 VPATH := $(VPATH)
 
 # Where to find header files for this project
