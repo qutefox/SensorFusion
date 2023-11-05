@@ -181,13 +181,17 @@ int Lps22hb::handle_interrupt1()
         modulo_avg_pressure += curr_pressure % data_level;
 
         curr_temperature = lps22hb_fifo_output_data_to_raw_temperature(&fifo_buffer[i]);
-        avg_temperature += curr_temperature / data_level;  
+        avg_temperature += curr_temperature / data_level;
         modulo_avg_temperature += curr_temperature % data_level;
     }
 
     avg_pressure += modulo_avg_pressure / data_level;
+    raw_pressure.i32bit = avg_pressure;
+    
     avg_temperature += modulo_avg_temperature / data_level;
-    data_processor->set_baro_data(avg_pressure, avg_temperature);
+    raw_temperature.i16bit = avg_temperature;
+
+    data_processor->update_baro_data(raw_pressure, raw_temperature);
 
     set_sensor_error1(err);
     return err;

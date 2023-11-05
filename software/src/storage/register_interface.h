@@ -25,7 +25,7 @@ public:
     virtual inline bool read(RegisterType* buffer, AddressType length, bool mark_read=true) = 0;
 
     virtual inline void write(RegisterType value, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
-    virtual inline bool write(RegisterType* buffer, AddressType length, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
+    virtual inline bool write(const RegisterType* buffer, AddressType length, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
 };
 
 template<typename RegisterType, typename AddressType>
@@ -39,7 +39,7 @@ public:
     virtual inline bool read(AddressType offset, RegisterType& value, bool mark_read=true) = 0;
     virtual inline bool read(AddressType offset, RegisterType* buffer, AddressType length, bool mark_read=true) = 0;
 
-    virtual inline void write(RegisterType* buffer, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
+    virtual inline void write(const RegisterType* buffer, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
     virtual inline bool write(AddressType offset, RegisterType value, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
     virtual inline bool write(AddressType offset, RegisterType* buffer, AddressType length, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
 

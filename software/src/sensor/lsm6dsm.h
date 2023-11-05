@@ -2,7 +2,8 @@
 
 #include <stdint.h>
 
-#include "sensor_base.h"
+#include "src/sensor/sensor_types.h"
+#include "src/sensor/sensor_base.h"
 
 namespace sensor
 {
@@ -12,6 +13,10 @@ class Lsm6dsm : public SensorBase
 private:
     static Lsm6dsm* instance;
     static uint32_t lock;
+
+    temperature_t raw_temperature;
+    axis3bit16_t raw_gyro;
+    axis3bit16_t raw_accel;
 
     virtual int reset() override;
     virtual inline void set_sensor_error1(bool value) override;

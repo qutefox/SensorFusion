@@ -50,6 +50,7 @@ int SensorFusionBoard::begin()
 
     led_pin = new io::pin::Output(MXC_GPIO0, LED_PIN_MASK);
     err |= led_pin->begin();
+    led_pin->set(true);
 
     baro_int_pin = new io::pin::Input(MXC_GPIO0, BARO_INT_MASK);
     err |= baro_int_pin->begin();
@@ -74,6 +75,8 @@ int SensorFusionBoard::begin()
 
     mag_sensor = sensor::Lis2mdl::get_instance(LIS2MDL_I2C_ADDR, false, mag_int_pin);
     err |= mag_sensor->begin();
+
+    led_pin->set(false);
 
     init_done = true;
     return err;

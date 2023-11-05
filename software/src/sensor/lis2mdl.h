@@ -2,7 +2,8 @@
 
 #include <stdint.h>
 
-#include "sensor_base.h"
+#include "src/sensor/sensor_types.h"
+#include "src/sensor/sensor_base.h"
 
 namespace sensor
 {
@@ -12,7 +13,9 @@ class Lis2mdl : public SensorBase
 private:
     static Lis2mdl* instance;
     static uint32_t lock;
-    axis3bit16_t buffer;
+    
+    axis3bit16_t raw_mag;
+    temperature_t raw_temperature;
 
     virtual int reset() override;
     virtual inline void set_sensor_error1(bool value) override;

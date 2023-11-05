@@ -11,13 +11,24 @@ Output::Output(mxc_gpio_regs_t *pin_port, uint32_t pin_mask, mxc_gpio_drvstr_t d
     gpio.drvstr = drive_strength;
 	gpio.pad = MXC_GPIO_PAD_NONE;
 	gpio.func = MXC_GPIO_FUNC_OUT;
+
+    MXC_GPIO_Init(gpio.mask);
+}
+
+Output::~Output()
+{
+    MXC_GPIO_Shutdown(gpio.mask);
 }
 
 int Output::begin()
 {
-    // TODO: Sometimes (especially after programmer reset) MXC_GPIO_Config fails with E_BAD_PARAM.
-    // Maybe when MXC_GPIO_Config fails, we should try to reset then configure it again?
-    return MXC_GPIO_Config(&gpio);
+    int err = MXC_GPIO_Config(&gpio);
+    if (err != E_NO_ERROR)
+    {
+        MXC_GPIO_Reset(gpio.mask);
+        return MXC_GPIO_Config(&gpio);
+    }
+    return err;
 }
 
 int Output::set(bool value)

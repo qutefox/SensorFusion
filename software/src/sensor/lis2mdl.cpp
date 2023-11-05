@@ -142,9 +142,10 @@ int Lis2mdl::set_power_mode(PowerMode power_mode)
 int Lis2mdl::handle_interrupt1()
 {
     int err = E_NO_ERROR;
-    err |= lis2mdl_magnetic_raw_get(dev_ctx, buffer.i16bit);
+    err |= lis2mdl_magnetic_raw_get(dev_ctx, raw_mag.i16bit);
+    err |= lis2mdl_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
     
-    // TODO: update board with received mag data.
+    data_processor->update_mag_data(raw_mag, raw_temperature);
 
     set_sensor_errors(err);
     return err;

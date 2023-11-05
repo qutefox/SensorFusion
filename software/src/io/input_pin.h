@@ -13,7 +13,8 @@ class Input
 
 public:
     Input(mxc_gpio_regs_t *pin_port, uint32_t pin_mask, mxc_gpio_pad_t pullup_pulldown = mxc_gpio_pad_t::MXC_GPIO_PAD_NONE);
-
+    virtual ~Input();
+    
     int begin();
 
     int get(bool& value);

@@ -4,6 +4,7 @@
 
 #include "src/io/output_pin.h"
 #include "src/storage/register_interface.h"
+#include "src/sensor/sensor_types.h"
 
 class DataProcessorInterface
 {
@@ -23,5 +24,8 @@ public:
     virtual void set_baro_sensor_error(bool error) = 0;
     virtual bool has_sensor_error() const = 0;
 
-    virtual void set_baro_data(int32_t pressure, int16_t temperature) = 0;
+    virtual void update_baro_data(const sensor::pressure_t& pressure, const sensor::temperature_t& temperature) = 0;
+    virtual void update_inertial_data(const sensor::axis3bit16_t& gyro, const sensor::axis3bit16_t& accel, const sensor::temperature_t& temperature) = 0;
+    virtual void update_mag_data(const sensor::axis3bit16_t& mag, const sensor::temperature_t& temperature) = 0;
+
 };

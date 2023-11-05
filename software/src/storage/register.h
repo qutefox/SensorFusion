@@ -50,7 +50,7 @@ public:
         else value = write_value;
     }
 
-    virtual inline bool write(RegisterType* buffer, AddressType write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
+    virtual inline bool write(const RegisterType* buffer, AddressType write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
         if (write_length != 1) return false;
         write(buffer[0], use_write_mask, mark_changed_bits);
@@ -104,7 +104,7 @@ public:
         read_flag = false;
     }
 
-    virtual inline bool write(RegisterType* buffer, AddressType write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
+    virtual inline bool write(const RegisterType* buffer, AddressType write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
         if (write_length != 1) return false;
         write(buffer[0], use_write_mask, mark_changed_bits);
@@ -224,7 +224,7 @@ public:
         if (mark_changed_bits) written_bit_mask = (prev_value ^ value) | written_bit_mask;
     }
 
-    virtual inline bool write(RegisterType* buffer, AddressType write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
+    virtual inline bool write(const RegisterType* buffer, AddressType write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
         if (write_length != 1) return false;
         write(buffer[0], use_write_mask, mark_changed_bits);
@@ -390,7 +390,7 @@ public:
         registers[0]->write(write_value, use_write_mask, mark_changed_bits);
     }
 
-    virtual inline void write(RegisterType* buffer, bool use_write_mask=true, bool mark_changed_bits=true) override
+    virtual inline void write(const RegisterType* buffer, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
         for (N i = 0; i < length; ++i)
         {
@@ -398,7 +398,7 @@ public:
         }
     }
 
-    virtual inline bool write(RegisterType* buffer, N write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
+    virtual inline bool write(const RegisterType* buffer, N write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
         if (write_length >= length) return false;
         for (N i = 0; i < write_length; ++i)

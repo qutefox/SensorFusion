@@ -13,12 +13,6 @@ typedef _stmdev_ctx_t stmdev_ctx_t;
 namespace sensor
 {
 
-typedef union
-{
-    int16_t i16bit[3];
-    uint8_t u8bit[6];
-} axis3bit16_t;
-
 class SensorBase : public SensorInterface
 {
 protected:

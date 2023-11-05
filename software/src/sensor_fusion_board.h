@@ -59,6 +59,7 @@ public:
     int begin();
 
     io::pin::Output* get_led_pin() const { return led_pin; }
+    io::i2c::I2cSlave* get_i2c_slave() const { return i2c_slave; }
     sensor::SensorInterface* get_baro_sensor() const { return baro_sensor; }
     sensor::SensorInterface* get_inertial_sensor() const { return inertial_sensor; }
     sensor::SensorInterface* get_mag_sensor() const { return mag_sensor; }

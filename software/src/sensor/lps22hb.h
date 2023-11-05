@@ -2,7 +2,8 @@
 
 #include <stdint.h>
 
-#include "sensor_base.h"
+#include "src/sensor/sensor_types.h"
+#include "src/sensor/sensor_base.h"
 
 // Forward declare types.
 struct _lps22hb_fifo_output_data_t;
@@ -16,6 +17,9 @@ class Lps22hb : public SensorBase
 private:
     static Lps22hb* instance;
     static uint32_t lock;
+
+    pressure_t raw_pressure;
+    temperature_t raw_temperature;
 
     lps22hb_fifo_output_data_t* fifo_buffer = nullptr;
 

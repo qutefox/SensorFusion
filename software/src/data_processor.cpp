@@ -25,9 +25,18 @@ DataProcessor::DataProcessor()
 
     sensor_error_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
     data_ready_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
-    led_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0xFF, 0x00);
+    led_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x01, 0x00);
+    quat_registers = new storage::MultiRegister<uint8_t, uint8_t>(12, true, make_registers_with_read_flag);
     baro_pressure_registers = new storage::MultiRegister<uint8_t, uint8_t>(3, true, make_registers_with_read_flag);
     baro_temperature_registers = new storage::MultiRegister<uint8_t, uint8_t>(2, true, make_registers_with_read_flag);
+    inertial_gyro_axis_registers = new storage::MultiRegister<uint8_t, uint8_t>(6, true, make_registers_with_read_flag);
+    inertial_accel_axis_registers = new storage::MultiRegister<uint8_t, uint8_t>(6, true, make_registers_with_read_flag);
+    inertial_temperature_registers = new storage::MultiRegister<uint8_t, uint8_t>(2, true, make_registers_with_read_flag);
+    mag_axis_registers = new storage::MultiRegister<uint8_t, uint8_t>(6, true, make_registers_with_read_flag);
+    mag_temperature_registers = new storage::MultiRegister<uint8_t, uint8_t>(2, true, make_registers_with_read_flag);
+
+    // TODO: add a control register that starts/stops the sensors, fusion.
+    // TODO: add calibration registers.
 
     register_map = new storage::MultiRegister<uint8_t, uint8_t>(8, false,
         [this](storage::RegisterInterface<uint8_t, uint8_t>** registers, uint8_t length)
@@ -36,9 +45,51 @@ DataProcessor::DataProcessor()
             registers[idx++] = sensor_error_register;
             registers[idx++] = data_ready_register;
             registers[idx++] = led_register;
+
+            registers[idx++] = quat_registers;
+            registers[idx++] = quat_registers->get_register(1);
+            registers[idx++] = quat_registers->get_register(2);
+            registers[idx++] = quat_registers->get_register(3);
+            registers[idx++] = quat_registers->get_register(4);
+            registers[idx++] = quat_registers->get_register(5);
+            registers[idx++] = quat_registers->get_register(6);
+            registers[idx++] = quat_registers->get_register(7);
+            registers[idx++] = quat_registers->get_register(8);
+            registers[idx++] = quat_registers->get_register(9);
+            registers[idx++] = quat_registers->get_register(10);
+            registers[idx++] = quat_registers->get_register(11);
+
+            registers[idx++] = inertial_gyro_axis_registers;
+            registers[idx++] = inertial_gyro_axis_registers->get_register(1);
+            registers[idx++] = inertial_gyro_axis_registers->get_register(2);
+            registers[idx++] = inertial_gyro_axis_registers->get_register(3);
+            registers[idx++] = inertial_gyro_axis_registers->get_register(4);
+            registers[idx++] = inertial_gyro_axis_registers->get_register(5);
+
+            registers[idx++] = inertial_accel_axis_registers;
+            registers[idx++] = inertial_accel_axis_registers->get_register(1);
+            registers[idx++] = inertial_accel_axis_registers->get_register(2);
+            registers[idx++] = inertial_accel_axis_registers->get_register(3);
+            registers[idx++] = inertial_accel_axis_registers->get_register(4);
+            registers[idx++] = inertial_accel_axis_registers->get_register(5);
+
+            registers[idx++] = inertial_temperature_registers;
+            registers[idx++] = inertial_temperature_registers->get_register(1);
+
+            registers[idx++] = mag_axis_registers;
+            registers[idx++] = mag_axis_registers->get_register(1);
+            registers[idx++] = mag_axis_registers->get_register(2);
+            registers[idx++] = mag_axis_registers->get_register(3);
+            registers[idx++] = mag_axis_registers->get_register(4);
+            registers[idx++] = mag_axis_registers->get_register(5);
+
+            registers[idx++] = mag_temperature_registers;
+            registers[idx++] = mag_temperature_registers->get_register(1);
+
             registers[idx++] = baro_pressure_registers;
             registers[idx++] = baro_pressure_registers->get_register(1);
             registers[idx++] = baro_pressure_registers->get_register(2);
+
             registers[idx++] = baro_temperature_registers;
             registers[idx++] = baro_temperature_registers->get_register(1);
         }
@@ -72,53 +123,118 @@ storage::MultiRegisterInterface<uint8_t, uint8_t>* DataProcessor::get_register_m
     return register_map;
 }
 
+void DataProcessor::update_data_ready_flags_and_write_new_data()
+{
+    storage::register_fields::register_types_u reg;
+    data_ready_register->read(reg.byte, false);
+
+    // Baro data:
+    bool could_set_new_baro_data =
+        !reg.data_ready.baro_data_ready ||
+        baro_pressure_registers->is_read() ||
+        baro_temperature_registers->is_read();
+
+    if (could_set_new_baro_data)
+    {
+        reg.data_ready.baro_data_ready = 0;
+        if (has_new_baro_data)
+        {
+            baro_pressure_registers->write(baro_pressure_data.u8bit, false, false);
+            baro_temperature_registers->write(baro_temperature_data.u8bit, false, false);
+            reg.data_ready.baro_data_ready = 1;
+        }
+    }
+
+    // Inertial data:
+    bool could_set_new_inertial_data =
+        !reg.data_ready.gyro_data_ready ||
+        !reg.data_ready.accel_data_ready ||
+        inertial_gyro_axis_registers->is_read() ||
+        inertial_accel_axis_registers->is_read() ||
+        inertial_temperature_registers->is_read();
+
+    if (could_set_new_inertial_data)
+    {
+        reg.data_ready.gyro_data_ready = 0;
+        reg.data_ready.accel_data_ready = 0;
+        if (has_new_inertial_data)
+        {
+            inertial_gyro_axis_registers->write(inertial_gyro_data.u8bit, false, false);
+            inertial_accel_axis_registers->write(inertial_accel_data.u8bit, false, false);
+            inertial_temperature_registers->write(inertial_temperature_data.u8bit, false, false);
+            reg.data_ready.gyro_data_ready = 1;
+            reg.data_ready.accel_data_ready = 1;
+        }
+    }
+
+    // Mag data:
+    bool could_set_new_mag_data = 
+        !reg.data_ready.mag_data_ready ||
+        mag_axis_registers->is_read() ||
+        mag_temperature_registers->is_read();
+
+    if (could_set_new_mag_data)
+    {
+        reg.data_ready.mag_data_ready = 0;
+        if (has_new_mag_data)
+        {
+            mag_axis_registers->write(mag_data.u8bit, false, false);
+            mag_temperature_registers->write(mag_temperature_data.u8bit, false, false);
+            reg.data_ready.mag_data_ready = 1;
+        }
+    }
+
+    data_ready_register->write(reg.byte, false, false);
+}
+
 void DataProcessor::update_register_map()
 {
     storage::register_fields::register_types_u reg;
 
     // Handle register reads.
-    data_ready_register->read(reg.byte, false);
-
-    if (baro_pressure_registers->is_read() || baro_temperature_registers->is_read()) reg.data_ready.baro_data_ready = 0;
-    // TODO: other sensors
-
-    data_ready_register->write(reg.byte, false, false);
+    update_data_ready_flags_and_write_new_data();
 
     // Handle register writes.
     uint8_t addr, written_bit_mask, new_value;
     while(register_map->get_next_written_and_changed_register(addr, written_bit_mask, new_value))
 	{
-        debug_print("register changed: addr=%02X, written_bit_mask=%02X, new_value=%02X.\n", addr, written_bit_mask, new_value);
-
+        // debug_print("register changed: addr=%02X, written_bit_mask=%02X, new_value=%02X.\n", addr, written_bit_mask, new_value);
         reg.byte = new_value;
 
         switch(addr)
         {
         case 2:
-        
-            board->get_led_pin()->set(reg.led.state);
+            if (!has_sensor_error()) board->get_led_pin()->set(reg.led.state);
             break;
         }
         // TODO: react to received data/change.
     }
+
+    if (has_sensor_error()) board->get_led_pin()->set(true);
 }
 
-void DataProcessor::set_baro_data(int32_t pressure, int16_t temperature)
+void DataProcessor::update_baro_data(const sensor::pressure_t& pressure, const sensor::temperature_t& temperature)
 {
-    storage::register_fields::register_types_u reg;
-    data_ready_register->read(reg.byte, false);
+    baro_pressure_data = pressure;
+    baro_temperature_data = temperature;
+    has_new_baro_data = true;
+}
 
-    if (!reg.data_ready.baro_data_ready || baro_pressure_registers->is_read() || baro_temperature_registers->is_read())
-    {
-        baro_pressure_registers->write(reinterpret_cast<uint8_t*>(&pressure), false, false);
-        baro_temperature_registers->write(reinterpret_cast<uint8_t*>(&temperature), false, false);
-        reg.data_ready.baro_data_ready = 1;
-        data_ready_register->write(reg.byte, false, false);
-    }
+void DataProcessor::update_inertial_data(const sensor::axis3bit16_t& gyro, const sensor::axis3bit16_t& accel, const sensor::temperature_t& temperature)
+{
+    // TODO: pass to magwick.
+    inertial_gyro_data = gyro;
+    inertial_accel_data = accel;
+    inertial_temperature_data = temperature;
+    has_new_inertial_data = true;
+}
 
-    // debug_print("set_baro_data done.\n");
-
-    // TODO: update sensor fusion.
+void DataProcessor::update_mag_data(const sensor::axis3bit16_t& mag, const sensor::temperature_t& temperature)
+{
+    // TODO: pass to magwick.
+    mag_data = mag;
+    mag_temperature_data = temperature;
+    has_new_mag_data = true;
 }
 
 void DataProcessor::set_gyro_sensor_error(bool error)

@@ -5,12 +5,13 @@
 #include "mxc_delay.h"
 #include "mxc_errors.h"
 #include "lp.h"
-#include "board.h"
 
 #include "src/sensor_fusion_board.h"
 #include "src/data_processor.h"
 
 #include "src/debug_print.h"
+
+// https://analog-devices-msdk.github.io/msdk/Libraries/PeriphDrivers/Documentation/MAX32660/
 
 int main()
 {

@@ -88,9 +88,9 @@ int Lsm6dsm::begin()
     // Enable i2c address auto increment.
     err |= lsm6dsm_auto_increment_set(dev_ctx, PROPERTY_ENABLE);
     // Set FIFO watermark to a multiple of a pattern.
-    // Our pattern is: [GYRO + ACCEL] = 12 bytes
+    // Our pattern is: [GYRO + ACCEL + TEMP] = 6 + 6 + 2 bytes
     // We set watermark to 32 patterns.
-    err |= lsm6dsm_fifo_watermark_set(dev_ctx, 32 * 12);
+    err |= lsm6dsm_fifo_watermark_set(dev_ctx, 32 * 14);
     err |=lsm6dsm_fifo_stop_on_wtm_set(dev_ctx, PROPERTY_ENABLE);
     // Set FIFO mode to Stream to FIFO.
     err |=lsm6dsm_fifo_mode_set(dev_ctx, LSM6DSM_STREAM_TO_FIFO_MODE);
@@ -109,6 +109,8 @@ int Lsm6dsm::begin()
     err2 |= lsm6dsm_xl_full_scale_set(dev_ctx, LSM6DSM_2g);
     // Set accel low pass filter 2.
     err2 |= lsm6dsm_xl_lp2_bandwidth_set(dev_ctx, LSM6DSM_XL_LOW_NOISE_LP_ODR_DIV_9);
+    // Enable the temperature data storage in FIFO.
+    err2 |= lsm6dsm_fifo_temp_batch_set(dev_ctx, PROPERTY_ENABLE);
 
     // Enable significant motion interrupt generation on INT1 pin.
     lsm6dsm_int1_route_t int1_reg;
@@ -200,21 +202,17 @@ int Lsm6dsm::handle_interrupt1()
 {
     int err = E_NO_ERROR;
 
-    axis3bit16_t data_raw_acceleration;
-    axis3bit16_t data_raw_angular_rate;
-
-    uint16_t num = 0;
     // Read number of word in FIFO.
-    lsm6dsm_fifo_data_level_get(dev_ctx, &num);
-    uint16_t num_pattern = num / 12;
+    uint16_t num = 0;
+    err |= lsm6dsm_fifo_data_level_get(dev_ctx, &num);
+
+    uint16_t num_pattern = num / 14;
     while (num_pattern-- > 0)
     {
-        lsm6dsm_fifo_raw_data_get(dev_ctx, data_raw_angular_rate.u8bit, 3 * sizeof(int16_t));
-        lsm6dsm_fifo_raw_data_get(dev_ctx, data_raw_acceleration.u8bit, 3 * sizeof(int16_t));
-
-        // debug_print("gyro %d, %d, %d.\n", data_raw_angular_rate.i16bit[0], data_raw_angular_rate.i16bit[1], data_raw_angular_rate.i16bit[2]);
-        // debug_print("acc %d, %d, %d.\n", data_raw_acceleration.i16bit[0], data_raw_acceleration.i16bit[1], data_raw_acceleration.i16bit[2]);
-        // TODO: update sensor fusion.
+        err |= lsm6dsm_fifo_raw_data_get(dev_ctx, raw_gyro.u8bit, 3 * sizeof(int16_t));
+        err |= lsm6dsm_fifo_raw_data_get(dev_ctx, raw_accel.u8bit, 3 * sizeof(int16_t));
+        err |= lsm6dsm_fifo_raw_data_get(dev_ctx, raw_temperature.u8bit, sizeof(int16_t));
+        data_processor->update_inertial_data(raw_gyro, raw_accel, raw_temperature);
     }
 
     set_sensor_errors(err);
@@ -225,13 +223,12 @@ int Lsm6dsm::handle_interrupt2()
 {
     int err = E_NO_ERROR;
 
-    debug_print("Lsm6dsm -> significant motion interrupt.\n");
-
     lsm6dsm_all_sources_t sources;
     lsm6dsm_all_sources_get(dev_ctx, &sources);
     if (sources.func_src1.sign_motion_ia)
     {
         // Significant motion event detected.
+        // TODO: do something!
     }
 
     set_sensor_errors(err);
