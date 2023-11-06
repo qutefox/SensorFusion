@@ -1,6 +1,7 @@
 #include "sensor_fusion_board.h"
 
 #include "mxc_device.h"
+#include "nvic_table.h"
 #include "mxc_errors.h"
 #include "mxc_lock.h"
 #include "uart.h"
@@ -44,9 +45,6 @@ int SensorFusionBoard::begin()
     int err = E_NO_ERROR;
     if (init_done) return err;
 
-#ifdef ENABLE_DEBUG_PRINT
-        MXC_UART_Init(MXC_UART_GET_UART(CONSOLE_UART), CONSOLE_BAUD, MAP_A);
-#endif
 
     led_pin = new io::pin::Output(MXC_GPIO0, LED_PIN_MASK);
     err |= led_pin->begin();

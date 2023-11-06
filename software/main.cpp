@@ -5,6 +5,7 @@
 #include "mxc_delay.h"
 #include "mxc_errors.h"
 #include "lp.h"
+#include "uart.h"
 
 #include "src/sensor_fusion_board.h"
 #include "src/data_processor.h"
@@ -15,6 +16,11 @@
 
 int main()
 {
+
+#ifdef ENABLE_DEBUG_PRINT
+    MXC_UART_Init(MXC_UART_GET_UART(CONSOLE_UART), CONSOLE_BAUD, MAP_A);
+#endif
+
 	debug_print("\n\nMAX32660 started with debug info.\n");
 
 	SensorFusionBoard* board = SensorFusionBoard::get_instance();
@@ -22,11 +28,19 @@ int main()
 	{
 		debug_print("Failed to initaise board.\n");
 	}
+	else
+	{
+		debug_print("Board successfully initaised.\n");
+	}
 
 	DataProcessor* data_processor = DataProcessor::get_instance();
 	if (data_processor->begin() != E_NO_ERROR)
 	{
 		debug_print("Failed to initaise data processor.\n");
+	}
+	else
+	{
+		debug_print("Data processor successfully initaised.\n");
 	}
 
 	__enable_irq();

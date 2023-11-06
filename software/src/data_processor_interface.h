@@ -17,6 +17,7 @@ public:
     virtual storage::MultiRegisterInterface<uint8_t, uint8_t>* get_register_map() const = 0;
 
     virtual void update_register_map() = 0;
+    virtual void update_fusion() = 0;
 
     virtual void set_gyro_sensor_error(bool error) = 0;
     virtual void set_accel_sensor_error(bool error) = 0;
@@ -25,7 +26,7 @@ public:
     virtual bool has_sensor_error() const = 0;
 
     virtual void update_baro_data(const sensor::pressure_t& pressure, const sensor::temperature_t& temperature) = 0;
-    virtual void update_inertial_data(const sensor::axis3bit16_t& gyro, const sensor::axis3bit16_t& accel, const sensor::temperature_t& temperature) = 0;
-    virtual void update_mag_data(const sensor::axis3bit16_t& mag, const sensor::temperature_t& temperature) = 0;
+    virtual void update_inertial_data(const sensor::axis3float_t& gyro, const sensor::axis3float_t& accel, const sensor::temperature_t& temperature) = 0;
+    virtual void update_mag_data(const sensor::axis3float_t& mag, const sensor::temperature_t& temperature) = 0;
 
 };

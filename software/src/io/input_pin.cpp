@@ -2,6 +2,7 @@
 
 #include "mxc_device.h"
 #include "mxc_errors.h"
+#include "nvic_table.h"
 #include "lp.h"
 
 using namespace io::pin;

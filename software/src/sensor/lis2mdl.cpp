@@ -145,7 +145,13 @@ int Lis2mdl::handle_interrupt1()
     err |= lis2mdl_magnetic_raw_get(dev_ctx, raw_mag.i16bit);
     err |= lis2mdl_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
     
-    data_processor->update_mag_data(raw_mag, raw_temperature);
+    data_processor->update_mag_data(
+        {
+            lis2mdl_from_lsb_to_mgauss(raw_mag.i16bit[0]),
+            lis2mdl_from_lsb_to_mgauss(raw_mag.i16bit[1]),
+            lis2mdl_from_lsb_to_mgauss(raw_mag.i16bit[2])
+        },
+        raw_temperature);
 
     set_sensor_errors(err);
     return err;

@@ -102,7 +102,7 @@ int Lsm6dsm::begin()
     // Set interrupt pin polarity to active low.
     err |= lsm6dsm_pin_polarity_set(dev_ctx, LSM6DSM_ACTIVE_LOW);
     // Set gyro full-scale.
-    err1 |= lsm6dsm_gy_full_scale_set(dev_ctx, LSM6DSM_250dps);
+    err1 |= lsm6dsm_gy_full_scale_set(dev_ctx, LSM6DSM_500dps);
     // Set gyro low pass bandwidth.
     err1 |= lsm6dsm_gy_band_pass_set(dev_ctx, LSM6DSM_LP2_ONLY);
     // Set accel full-scale.
@@ -212,7 +212,18 @@ int Lsm6dsm::handle_interrupt1()
         err |= lsm6dsm_fifo_raw_data_get(dev_ctx, raw_gyro.u8bit, 3 * sizeof(int16_t));
         err |= lsm6dsm_fifo_raw_data_get(dev_ctx, raw_accel.u8bit, 3 * sizeof(int16_t));
         err |= lsm6dsm_fifo_raw_data_get(dev_ctx, raw_temperature.u8bit, sizeof(int16_t));
-        data_processor->update_inertial_data(raw_gyro, raw_accel, raw_temperature);
+        data_processor->update_inertial_data(
+            {
+                lsm6dsm_from_fs500dps_to_mdps(raw_gyro.i16bit[0]),
+                lsm6dsm_from_fs500dps_to_mdps(raw_gyro.i16bit[1]),
+                lsm6dsm_from_fs500dps_to_mdps(raw_gyro.i16bit[2])
+            },
+            {
+                lsm6dsm_from_fs2g_to_mg(raw_accel.i16bit[0]),
+                lsm6dsm_from_fs2g_to_mg(raw_accel.i16bit[1]),
+                lsm6dsm_from_fs2g_to_mg(raw_accel.i16bit[2])
+            },
+            raw_temperature);
     }
 
     set_sensor_errors(err);

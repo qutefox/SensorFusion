@@ -4,6 +4,8 @@
 
 #include "src/data_processor_interface.h"
 #include "src/sensor_fusion_board.h"
+#include "src/timer/counter.h"
+#include "src/Fusion/Fusion/Fusion.h"
 
 class DataProcessor : public DataProcessorInterface
 {
@@ -14,6 +16,7 @@ private:
 
     storage::MultiRegisterInterface<uint8_t, uint8_t>* register_map;
     SensorFusionBoard* board = nullptr;
+    timer::Counter* counter = nullptr;
 
     storage::RegisterInterface<uint8_t, uint8_t>* sensor_error_register;
     storage::RegisterInterface<uint8_t, uint8_t>* data_ready_register;
@@ -32,13 +35,18 @@ private:
     sensor::temperature_t baro_temperature_data;
 
     bool has_new_inertial_data = false;
-    sensor::axis3bit16_t inertial_gyro_data;
-    sensor::axis3bit16_t inertial_accel_data;
+    sensor::axis3float_t inertial_gyro_data;
+    sensor::axis3float_t inertial_accel_data;
     sensor::temperature_t inertial_temperature_data;
 
     bool has_new_mag_data = false;
-    sensor::axis3bit16_t mag_data;
+    sensor::axis3float_t mag_data;
     sensor::temperature_t mag_temperature_data;
+
+    FusionAhrs ahrs;
+    FusionQuaternion fusion_quaternion;
+
+    void create_register_map();
 
     void update_data_ready_flags_and_write_new_data();
 
@@ -57,6 +65,7 @@ public:
     virtual storage::MultiRegisterInterface<uint8_t, uint8_t>* get_register_map() const override;
 
     virtual void update_register_map() override;
+    virtual void update_fusion() override;
 
     virtual void set_gyro_sensor_error(bool error) override;
     virtual void set_accel_sensor_error(bool error) override;
@@ -65,6 +74,6 @@ public:
     virtual bool has_sensor_error() const override;
 
     virtual void update_baro_data(const sensor::pressure_t& pressure, const sensor::temperature_t& temperature) override;
-    virtual void update_inertial_data(const sensor::axis3bit16_t& gyro, const sensor::axis3bit16_t& accel, const sensor::temperature_t& temperature) override;
-    virtual void update_mag_data(const sensor::axis3bit16_t& mag, const sensor::temperature_t& temperature) override;
+    virtual void update_inertial_data(const sensor::axis3float_t& gyro, const sensor::axis3float_t& accel, const sensor::temperature_t& temperature) override;
+    virtual void update_mag_data(const sensor::axis3float_t& mag, const sensor::temperature_t& temperature) override;
 };

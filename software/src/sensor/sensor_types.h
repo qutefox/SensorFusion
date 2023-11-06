@@ -13,6 +13,17 @@ typedef union
 
 typedef union
 {
+    float array[3];
+    struct
+    {
+        float x;
+        float y;
+        float z;
+    } axis;
+} axis3float_t;
+
+typedef union
+{
     int32_t i32bit;
     uint8_t u8bit[4];
 } pressure_t;
