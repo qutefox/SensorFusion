@@ -12,8 +12,11 @@ using namespace sensor;
 Lsm6dsm* Lsm6dsm::instance = nullptr;
 uint32_t Lsm6dsm::lock = 0;
 
-Lsm6dsm::Lsm6dsm(uint8_t i2c_address, bool i2c_debug, io::pin::Input* interrupt_pin1, io::pin::Input* interrupt_pin2)
+Lsm6dsm::Lsm6dsm(uint8_t i2c_address, bool i2c_debug,
+    io::DigitalInputPinInterface* interrupt_pin1, io::DigitalInputPinInterface* interrupt_pin2)
     : SensorBase(i2c_address, i2c_debug, interrupt_pin1, interrupt_pin2)
+    , gyroscope_data_ready{ 0 }
+    , accelerometer_data_ready{ 0 }
 {
 
 }
@@ -24,7 +27,7 @@ Lsm6dsm::~Lsm6dsm()
 }
 
 Lsm6dsm* Lsm6dsm::get_instance(uint8_t i2c_address, bool i2c_debug,
-    io::pin::Input* interrupt_pin1, io::pin::Input* interrupt_pin2)
+    io::DigitalInputPinInterface* interrupt_pin1, io::DigitalInputPinInterface* interrupt_pin2)
 {
     MXC_GetLock(&lock, 1);
     if (instance == nullptr)
@@ -50,16 +53,6 @@ int Lsm6dsm::reset()
     return err;
 }
 
-void Lsm6dsm::set_sensor_error1(bool value)
-{
-    data_processor->set_gyro_sensor_error(value);
-}
-
-void Lsm6dsm::set_sensor_error2(bool value)
-{
-    data_processor->set_accel_sensor_error(value);
-}
-
 bool Lsm6dsm::is_device_id_valid()
 {
     uint8_t whoami = 0;
@@ -73,30 +66,24 @@ int Lsm6dsm::begin()
     int err = E_NO_ERROR;
     int err1 = E_NO_ERROR;
     int err2 = E_NO_ERROR;
-    if (init_done) return err;
     err |= reset();
     if(!is_device_id_valid())
     {
-        set_sensor_errors(E_NO_DEVICE);
+        data_processor->set_gyroscope_sensor_error(true);
+        data_processor->set_accelerometer_sensor_error(true);
         return E_NO_DEVICE;
     }
      // Configure interrupt handler(s).
     err |= attach_interrupt1_handler(true);
     err |= attach_interrupt2_handler(true);
+    // Set High Resolution Timestamp (25 us tick).
+    err |= lsm6dsm_timestamp_res_set(dev_ctx, LSM6DSM_LSB_25us);
+    // Enable timestamp in HW .
+    err |= lsm6dsm_timestamp_set(dev_ctx, PROPERTY_ENABLE);
     // Enable block data update.
     err |= lsm6dsm_block_data_update_set(dev_ctx, PROPERTY_ENABLE);
     // Enable i2c address auto increment.
     err |= lsm6dsm_auto_increment_set(dev_ctx, PROPERTY_ENABLE);
-    // Set FIFO watermark to a multiple of a pattern.
-    // Our pattern is: [GYRO + ACCEL + TEMP] = 6 + 6 + 2 bytes
-    // We set watermark to 32 patterns.
-    err |= lsm6dsm_fifo_watermark_set(dev_ctx, 32 * 14);
-    err |=lsm6dsm_fifo_stop_on_wtm_set(dev_ctx, PROPERTY_ENABLE);
-    // Set FIFO mode to Stream to FIFO.
-    err |=lsm6dsm_fifo_mode_set(dev_ctx, LSM6DSM_STREAM_TO_FIFO_MODE);
-    // Set FIFO sensor decimator.
-    err1 |= lsm6dsm_fifo_gy_batch_set(dev_ctx, LSM6DSM_FIFO_GY_NO_DEC);
-    err2 |= lsm6dsm_fifo_xl_batch_set(dev_ctx, LSM6DSM_FIFO_XL_NO_DEC);
     // Set interrupt pin mode to push pull.
     err |= lsm6dsm_pin_mode_set(dev_ctx, LSM6DSM_PUSH_PULL);
     // Set interrupt pin polarity to active low.
@@ -109,25 +96,33 @@ int Lsm6dsm::begin()
     err2 |= lsm6dsm_xl_full_scale_set(dev_ctx, LSM6DSM_2g);
     // Set accel low pass filter 2.
     err2 |= lsm6dsm_xl_lp2_bandwidth_set(dev_ctx, LSM6DSM_XL_LOW_NOISE_LP_ODR_DIV_9);
-    // Enable the temperature data storage in FIFO.
-    err2 |= lsm6dsm_fifo_temp_batch_set(dev_ctx, PROPERTY_ENABLE);
 
-    // Enable significant motion interrupt generation on INT1 pin.
+    // Enable gyroscope, accelerometer interrupt generation on INT1 pin.
     lsm6dsm_int1_route_t int1_reg;
     err |= lsm6dsm_pin_int1_route_get(dev_ctx, &int1_reg);
-    int1_reg.int1_sign_mot = PROPERTY_ENABLE;
+    int1_reg.int1_drdy_g = PROPERTY_ENABLE;
+    int1_reg.int1_drdy_xl = PROPERTY_ENABLE;
     err |= lsm6dsm_pin_int1_route_set(dev_ctx, int1_reg);
 
-    // Enable FIFO watermark interrupt generation on INT2 pin.
+    // Enable temperature interrupt generation on INT2 pin.
     lsm6dsm_int2_route_t int2_reg;
     err |= lsm6dsm_pin_int2_route_get(dev_ctx, &int2_reg);
-    int2_reg.int2_fth = PROPERTY_ENABLE;
+    int2_reg.int2_drdy_temp = PROPERTY_ENABLE;
     err |= lsm6dsm_pin_int2_route_set(dev_ctx, int2_reg);
 
     // Set power mode.
     err |= set_power_mode(PowerMode::POWER_DOWN);
 
-    set_sensor_errors(err, err1, err2);
+    if (err != E_NO_ERROR)
+    {
+        data_processor->set_gyroscope_sensor_error(true);
+        data_processor->set_accelerometer_sensor_error(true);
+    }
+    else
+    {
+        data_processor->set_gyroscope_sensor_error(err1 != E_NO_ERROR);
+        data_processor->set_accelerometer_sensor_error(err2 != E_NO_ERROR);
+    }
     return err || err1 || err2;
 }
 
@@ -140,12 +135,13 @@ int Lsm6dsm::end()
     err |= attach_interrupt2_handler(false);
     if(!is_device_id_valid())
     {
-        set_sensor_errors(E_NO_DEVICE);
+        data_processor->set_gyroscope_sensor_error(true);
+        data_processor->set_accelerometer_sensor_error(true);
         return E_NO_DEVICE;
     }
     err |= set_power_mode(PowerMode::POWER_DOWN);
-    init_done = false;
-    set_sensor_errors(err);
+    data_processor->set_gyroscope_sensor_error(err != E_NO_ERROR);
+    data_processor->set_accelerometer_sensor_error(err != E_NO_ERROR);
     return err;
 }
 
@@ -172,76 +168,92 @@ int Lsm6dsm::set_power_mode(PowerMode power_mode)
     case PowerMode::POWER_DOWN:
         err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_OFF);
         err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_OFF);
-        err |= lsm6dsm_fifo_data_rate_set(dev_ctx, LSM6DSM_FIFO_DISABLE);
         break;
     case PowerMode::LOW_POWER:
         // Low power for odrs: 12.5Hz, 26Hz and 52Hz.
-        err |= lsm6dsm_fifo_data_rate_set(dev_ctx, LSM6DSM_FIFO_52Hz);
         err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_52Hz);
         err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_52Hz);
         break;
     case PowerMode::NORMAL:
         // Normal for odrs: 104Hz and 208Hz.
-        err |= lsm6dsm_fifo_data_rate_set(dev_ctx, LSM6DSM_FIFO_208Hz);
         err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_208Hz);
-        err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_208Hz);
+        err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_104Hz);
         break;
     case PowerMode::HIGH_PERFORMANCE:
         // High performance for odrs: 416Hz, 833Hz, 1.66KHz, 3.33KHz and 6.66KHz.
-        err |= lsm6dsm_fifo_data_rate_set(dev_ctx, LSM6DSM_FIFO_416Hz);
-        err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_416Hz);
+        err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_833Hz);
         err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_416Hz);
         break;
     }
 
-    set_sensor_errors(err, err1, err2);
+    if (err != E_NO_ERROR)
+    {
+        data_processor->set_gyroscope_sensor_error(true);
+        data_processor->set_accelerometer_sensor_error(true);
+    }
+    else
+    {
+        data_processor->set_gyroscope_sensor_error(err1 != E_NO_ERROR);
+        data_processor->set_accelerometer_sensor_error(err2 != E_NO_ERROR);
+    }
+    
     return err || err1 || err2;
 }
 
 int Lsm6dsm::handle_interrupt1()
 {
-    int err = E_NO_ERROR;
-
-    // Read number of word in FIFO.
-    uint16_t num = 0;
-    err |= lsm6dsm_fifo_data_level_get(dev_ctx, &num);
-
-    uint16_t num_pattern = num / 14;
-    while (num_pattern-- > 0)
+    int err = lsm6dsm_data_ready_get(dev_ctx, &gyroscope_data_ready, &accelerometer_data_ready);
+    if (err != E_NO_ERROR)
     {
-        err |= lsm6dsm_fifo_raw_data_get(dev_ctx, raw_gyro.u8bit, 3 * sizeof(int16_t));
-        err |= lsm6dsm_fifo_raw_data_get(dev_ctx, raw_accel.u8bit, 3 * sizeof(int16_t));
-        err |= lsm6dsm_fifo_raw_data_get(dev_ctx, raw_temperature.u8bit, sizeof(int16_t));
-        data_processor->update_inertial_data(
-            {
-                lsm6dsm_from_fs500dps_to_mdps(raw_gyro.i16bit[0]),
-                lsm6dsm_from_fs500dps_to_mdps(raw_gyro.i16bit[1]),
-                lsm6dsm_from_fs500dps_to_mdps(raw_gyro.i16bit[2])
-            },
-            {
-                lsm6dsm_from_fs2g_to_mg(raw_accel.i16bit[0]),
-                lsm6dsm_from_fs2g_to_mg(raw_accel.i16bit[1]),
-                lsm6dsm_from_fs2g_to_mg(raw_accel.i16bit[2])
-            },
-            raw_temperature);
+        data_processor->set_gyroscope_sensor_error(true);
+        data_processor->set_accelerometer_sensor_error(true);
+        return err;
     }
-
-    set_sensor_errors(err);
-    return err;
+    if (lsm6dsm_timestamp_raw_get(dev_ctx, &raw_timestamp.u32bit) == E_NO_ERROR)
+    {
+        data_processor->update_timestamp(raw_timestamp);
+    }
+    int accelerometer_err = E_NO_ERROR;
+    if (accelerometer_data_ready)
+    {
+        accelerometer_err = lsm6dsm_acceleration_raw_get(dev_ctx, raw_accelerometer.i16bit);
+        if (accelerometer_err == E_NO_ERROR)
+        {
+            data_processor->update_accelerometer_fusion_vector(
+                {
+                    lsm6dsm_from_fs2g_to_mg(raw_accelerometer.i16bit[0]),
+                    lsm6dsm_from_fs2g_to_mg(raw_accelerometer.i16bit[1]),
+                    lsm6dsm_from_fs2g_to_mg(raw_accelerometer.i16bit[2])
+                }
+            );
+        }
+        data_processor->set_accelerometer_sensor_error(accelerometer_err != E_NO_ERROR);
+    }
+    int gyroscope_err = E_NO_ERROR;
+    if (gyroscope_data_ready)
+    {
+        gyroscope_err = lsm6dsm_angular_rate_raw_get(dev_ctx, raw_gyroscope.i16bit);
+        if (gyroscope_err == E_NO_ERROR)
+        {
+            data_processor->update_gyroscope_fusion_vector(
+                {
+                    lsm6dsm_from_fs500dps_to_mdps(raw_gyroscope.i16bit[0]),
+                    lsm6dsm_from_fs500dps_to_mdps(raw_gyroscope.i16bit[1]),
+                    lsm6dsm_from_fs500dps_to_mdps(raw_gyroscope.i16bit[2])
+                }
+            );
+        }
+        data_processor->set_gyroscope_sensor_error(gyroscope_err != E_NO_ERROR);
+    }
+    return gyroscope_err || accelerometer_err;
 }
 
 int Lsm6dsm::handle_interrupt2()
 {
-    int err = E_NO_ERROR;
-
-    lsm6dsm_all_sources_t sources;
-    lsm6dsm_all_sources_get(dev_ctx, &sources);
-    if (sources.func_src1.sign_motion_ia)
+    int err = lsm6dsm_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
+    if (err == E_NO_ERROR)
     {
-        // Significant motion event detected.
-        // TODO: do something!
+        data_processor->update_temperature(raw_temperature);
     }
-
-    set_sensor_errors(err);
     return err;
 }

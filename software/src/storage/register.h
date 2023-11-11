@@ -232,27 +232,28 @@ public:
     }
 };
 
-template<typename RegisterType, typename N>
-class MultiRegister : public MultiRegisterInterface<RegisterType, N>
+template<typename RegisterType, typename AddressType>
+class MultiRegister : public MultiRegisterInterface<RegisterType, AddressType>
 {
 protected:
-    N length = 0;
+    AddressType length = 0;
     bool has_parent = false;
-    RegisterInterface<RegisterType, N>** registers = nullptr;
+    RegisterInterface<RegisterType, AddressType>** registers = nullptr;
 
 public:
-    MultiRegister(N length, bool has_parent, std::function<void(RegisterInterface<RegisterType, N>** registers, N length)> initaliser_func)
+    MultiRegister(AddressType length, bool has_parent, std::function<void(RegisterInterface<RegisterType, AddressType>** registers, AddressType length)> initaliser_func)
         : length{ length }
         , has_parent{ has_parent }
         , registers{ nullptr }
     {
-        registers = static_cast<RegisterInterface<RegisterType, N>**>(malloc(sizeof(RegisterInterface<RegisterType, N>*) * length));
-        for (N i = 0; i < length; ++i)
+        registers = static_cast<RegisterInterface<RegisterType, AddressType>**>(malloc(sizeof(RegisterInterface<RegisterType, AddressType>*) * length));
+        for (AddressType i = 0; i < length; ++i)
         {
             registers[i] = nullptr;
         }
         initaliser_func(registers, length);
     }
+
     virtual ~MultiRegister()
     {
         if (has_parent)
@@ -262,11 +263,16 @@ public:
             return;
         }
 
-        for (N i = 0; i < length; ++i)
+        for (AddressType i = 0; i < length; ++i)
         {
             if (registers[i]) delete registers[i];
         }
         free(registers);
+    }
+
+    virtual AddressType size() const override
+    {
+        return length;
     }
 
     virtual inline bool get_read_flag() const override
@@ -274,7 +280,7 @@ public:
         return registers[0]->get_read_flag();
     }
 
-    virtual inline bool get_read_flag(bool& _read_flag, N offset) override
+    virtual inline bool get_read_flag(bool& _read_flag, AddressType offset) override
     {
         if (offset >= length) return false;
         _read_flag = registers[offset]->get_read_flag();
@@ -284,7 +290,7 @@ public:
     virtual inline bool is_read() const override
     {
         bool read_flag = true;
-        for (N i = 0; i < length; ++i)
+        for (AddressType i = 0; i < length; ++i)
         {
             read_flag &= registers[i]->get_read_flag();
         }
@@ -296,16 +302,16 @@ public:
         return registers[0]->get_written_bit_mask();
     }
 
-    virtual inline bool get_written_bit_mask(RegisterType& written_bit_mask, N offset) override
+    virtual inline bool get_written_bit_mask(RegisterType& written_bit_mask, AddressType offset) override
     {
         if (offset >= length) return false;
         written_bit_mask = registers[offset]->get_written_bit_mask();
         return true;
     }
 
-    virtual inline bool get_next_written_and_changed_register(N& offset, RegisterType& written_bit_mask, RegisterType& new_value) override
+    virtual inline bool get_next_written_and_changed_register(AddressType& offset, RegisterType& written_bit_mask, RegisterType& new_value) override
     {
-        for (N i = 0; i < length; ++i)
+        for (AddressType i = 0; i < length; ++i)
         {
             written_bit_mask = registers[i]->get_written_bit_mask();
             if (written_bit_mask)
@@ -318,13 +324,13 @@ public:
         return false;
     }
 
-    virtual inline RegisterInterface<RegisterType, N>* get_register(N offset) const override
+    virtual inline RegisterInterface<RegisterType, AddressType>* get_register(AddressType offset) const override
     {
         if (offset >= length) return nullptr;
         return registers[offset];
     }
 
-    virtual inline bool read(N offset, RegisterType& read_value, bool mark_read=true) override
+    virtual inline bool read(AddressType offset, RegisterType& read_value, bool mark_read=true) override
     {
         if (offset >= length)
         {
@@ -335,27 +341,27 @@ public:
         return true;
     }
 
-    virtual inline bool read(N offset, RegisterType* buffer, N read_length, bool mark_read=true) override
+    virtual inline bool read(AddressType offset, RegisterType* buffer, AddressType read_length, bool mark_read=true) override
     {
         if ((offset + read_length) > length) return false;
-        for (N i = 0; i < read_length; ++i)
+        for (AddressType i = 0; i < read_length; ++i)
         {
             registers[offset + i]->read(buffer[i], mark_read);
         }
         return true;
     }
 
-    virtual inline bool write(N offset, RegisterType value, bool use_write_mask=true, bool mark_changed_bits=true) override
+    virtual inline bool write(AddressType offset, RegisterType value, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
         if (offset >= length) return false;
         registers[offset]->write(value, use_write_mask, mark_changed_bits);
         return true;
     }
 
-    virtual inline bool write(N offset, RegisterType* buffer, N write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
+    virtual inline bool write(AddressType offset, RegisterType* buffer, AddressType write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
         if ((offset + write_length) > length) return false;
-        for (N i = 0; i < write_length; ++i)
+        for (AddressType i = 0; i < write_length; ++i)
         {
             registers[offset+i]->write(buffer[i], use_write_mask, mark_changed_bits);
         }
@@ -369,16 +375,16 @@ public:
 
     virtual inline void read(RegisterType* buffer, bool mark_read=true) override
     {
-        for (N i = 0; i < length; ++i)
+        for (AddressType i = 0; i < length; ++i)
         {
             registers[i]->read(buffer[i], mark_read);
         }
     }
 
-    virtual inline bool read(RegisterType* buffer, N read_length, bool mark_read=true) override
+    virtual inline bool read(RegisterType* buffer, AddressType read_length, bool mark_read=true) override
     {
         if (read_length >= length) return false;
-        for (N i = 0; i < read_length; ++i)
+        for (AddressType i = 0; i < read_length; ++i)
         {
             registers[i]->read(buffer[i], mark_read);
         }
@@ -392,16 +398,16 @@ public:
 
     virtual inline void write(const RegisterType* buffer, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
-        for (N i = 0; i < length; ++i)
+        for (AddressType i = 0; i < length; ++i)
         {
             registers[i]->write(buffer[i], use_write_mask, mark_changed_bits);
         }
     }
 
-    virtual inline bool write(const RegisterType* buffer, N write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
+    virtual inline bool write(const RegisterType* buffer, AddressType write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
         if (write_length >= length) return false;
-        for (N i = 0; i < write_length; ++i)
+        for (AddressType i = 0; i < write_length; ++i)
         {
             registers[i]->write(buffer[i], use_write_mask, mark_changed_bits);
         }

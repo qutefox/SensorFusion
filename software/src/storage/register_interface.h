@@ -35,6 +35,8 @@ public:
     MultiRegisterInterface() { }
     virtual ~MultiRegisterInterface() { }
 
+    virtual AddressType size() const = 0;
+
     virtual inline void read(RegisterType* buffer, bool mark_read=true) = 0;
     virtual inline bool read(AddressType offset, RegisterType& value, bool mark_read=true) = 0;
     virtual inline bool read(AddressType offset, RegisterType* buffer, AddressType length, bool mark_read=true) = 0;

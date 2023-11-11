@@ -18,18 +18,17 @@ private:
     static Lps22hb* instance;
     static uint32_t lock;
 
+    uint8_t pressure_data_ready = 0;
+    uint8_t temperature_data_ready = 0;
     pressure_t raw_pressure;
     temperature_t raw_temperature;
 
-    lps22hb_fifo_output_data_t* fifo_buffer = nullptr;
-
     virtual int reset() override;
-    virtual inline void set_sensor_error1(bool value) override;
     virtual bool is_device_id_valid() override;
 
 protected:
     Lps22hb(uint8_t i2c_address, bool i2c_debug=false,
-        io::pin::Input* interrupt_pin=nullptr);
+        io::DigitalInputPinInterface* interrupt_pin=nullptr);
     virtual ~Lps22hb();
 
 public:
@@ -37,7 +36,7 @@ public:
     void operator=(const Lps22hb& other) = delete;
 
     static Lps22hb* get_instance(uint8_t i2c_address, bool i2c_debug=false,
-        io::pin::Input* interrupt_pin=nullptr);
+        io::DigitalInputPinInterface* interrupt_pin=nullptr);
 
     virtual int begin() override;
     virtual int end() override;

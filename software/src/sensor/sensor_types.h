@@ -13,19 +13,8 @@ typedef union
 
 typedef union
 {
-    float array[3];
-    struct
-    {
-        float x;
-        float y;
-        float z;
-    } axis;
-} axis3float_t;
-
-typedef union
-{
-    int32_t i32bit;
-    uint8_t u8bit[4];
+    uint32_t u32bit;
+    uint8_t u8bit[4]; // only 3 byte actually.
 } pressure_t;
 
 typedef union
@@ -33,6 +22,12 @@ typedef union
     int16_t i16bit;
     uint8_t u8bit[2];
 } temperature_t;
+
+typedef union
+{
+    uint32_t u32bit;
+    uint8_t u8bit[4]; // only 3 byte actually.
+} timestamp_t;
 
 
 } // namespace sensor

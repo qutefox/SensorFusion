@@ -6,6 +6,9 @@
 #include "mxc_lock.h"
 #include "uart.h"
 
+#include "src/io/digital_input_pin.h"
+#include "src/io/digital_output_pin.h"
+#include "src/io/i2c_slave.h"
 #include "src/sensor/lps22hb.h"
 #include "src/sensor/lsm6dsm.h"
 #include "src/sensor/lis2mdl.h"
@@ -15,10 +18,15 @@ SensorFusionBoard* SensorFusionBoard::instance = nullptr;
 uint32_t SensorFusionBoard::lock = 0;
 
 SensorFusionBoard::SensorFusionBoard()
-    : init_done{ false }
-    , led_pin{ nullptr }
-    , baro_int_pin{ nullptr }
+    : led_pin{ nullptr }
+    , barometer_int_pin{ nullptr }
+    , inertial_int1_pin{ nullptr }
+    , inertial_int2_pin{ nullptr }
+    , magnetometer_int_pin{ nullptr }
     , i2c_slave{ nullptr }
+    , barometer_sensor{ nullptr }
+    , inertial_sensor{ nullptr }
+    , magnetometer_sensor{ nullptr }
 {
     
 }
@@ -26,7 +34,10 @@ SensorFusionBoard::SensorFusionBoard()
 SensorFusionBoard::~SensorFusionBoard()
 {
     delete led_pin;
-    delete baro_int_pin;
+    delete barometer_int_pin;
+    delete inertial_int1_pin;
+    delete inertial_int2_pin;
+    delete magnetometer_int_pin;
 }
 
 SensorFusionBoard* SensorFusionBoard::get_instance()
@@ -43,40 +54,30 @@ SensorFusionBoard* SensorFusionBoard::get_instance()
 int SensorFusionBoard::begin()
 {
     int err = E_NO_ERROR;
-    if (init_done) return err;
 
+    led_pin = new io::DigitalOutputPin(MXC_GPIO0, LED_PIN_MASK);
+    led_pin->write(true);
 
-    led_pin = new io::pin::Output(MXC_GPIO0, LED_PIN_MASK);
-    err |= led_pin->begin();
-    led_pin->set(true);
+    barometer_int_pin = new io::DigitalInputPin(MXC_GPIO0, BARO_INT_MASK);
+    inertial_int1_pin = new io::DigitalInputPin(MXC_GPIO0, INERTIAL_INT1_MASK);
+    inertial_int2_pin = new io::DigitalInputPin(MXC_GPIO0, INERTIAL_INT2_MASK);
+    magnetometer_int_pin = new io::DigitalInputPin(MXC_GPIO0, MAG_INT_MASK);
 
-    baro_int_pin = new io::pin::Input(MXC_GPIO0, BARO_INT_MASK);
-    err |= baro_int_pin->begin();
-
-    inertial_int1_pin = new io::pin::Input(MXC_GPIO0, INERTIAL_INT1_MASK);
-    err |= inertial_int1_pin->begin();
-
-    inertial_int2_pin = new io::pin::Input(MXC_GPIO0, INERTIAL_INT2_MASK);
-    err |= inertial_int2_pin->begin();
-
-    mag_int_pin = new io::pin::Input(MXC_GPIO0, MAG_INT_MASK);
-    err |= mag_int_pin->begin();
-
-    i2c_slave = io::i2c::I2cSlave::get_instance();
-    err |= i2c_slave->begin();
-
-    baro_sensor = sensor::Lps22hb::get_instance(LPS22HB_I2C_ADDR, false, baro_int_pin);
-    err |= baro_sensor->begin();
+    barometer_sensor = sensor::Lps22hb::get_instance(LPS22HB_I2C_ADDR, false, barometer_int_pin);
+    err |= barometer_sensor->begin();
+    barometer_sensor->set_power_mode(sensor::PowerMode::LOW_POWER);
 
     inertial_sensor = sensor::Lsm6dsm::get_instance(LSM6DSM_I2C_ADDR, false, inertial_int1_pin, inertial_int2_pin);
     err |= inertial_sensor->begin();
 
-    mag_sensor = sensor::Lis2mdl::get_instance(LIS2MDL_I2C_ADDR, false, mag_int_pin);
-    err |= mag_sensor->begin();
+    magnetometer_sensor = sensor::Lis2mdl::get_instance(LIS2MDL_I2C_ADDR, false, magnetometer_int_pin);
+    err |= magnetometer_sensor->begin();
 
-    led_pin->set(false);
+    i2c_slave = io::I2cSlave::get_instance();
+    err |= i2c_slave->begin();
 
-    init_done = true;
+    led_pin->write(false);
+
     return err;
 }
 

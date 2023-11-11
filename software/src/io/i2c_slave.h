@@ -4,6 +4,7 @@
 #include "i2c.h"
 
 #include "src/storage/register_interface.h"
+#include "src/io/i2c_slave_interface.h"
 
 #define I2C_SLAVE_MAX_DATA_RX 64
 #define I2C_SLAVE_ADDR_SIZE sizeof(uint8_t)
@@ -11,13 +12,10 @@
 
 namespace io
 {
-namespace i2c
-{
 
-class I2cSlave
+class I2cSlave : public I2cSlaveInterface
 {
 private:
-    bool init_done = false;
     static I2cSlave* instance;
     static uint32_t lock;
 
@@ -49,14 +47,9 @@ public:
 
     static I2cSlave* get_instance();
 
-    int begin();
-
+    virtual int begin() override;
     int prepare_for_next_transaction();
-
-    bool is_current_transaction_done() const { return transaction_done; }
+    virtual bool is_current_transaction_done() const override { return transaction_done; }
 };
 
-
-} // namespace i2c
 } // namespace io
-

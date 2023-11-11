@@ -12,7 +12,7 @@ using namespace sensor;
 Lis2mdl* Lis2mdl::instance = nullptr;
 uint32_t Lis2mdl::lock = 0;
 
-Lis2mdl::Lis2mdl(uint8_t i2c_address, bool i2c_debug, io::pin::Input* interrupt_pin)
+Lis2mdl::Lis2mdl(uint8_t i2c_address, bool i2c_debug, io::DigitalInputPinInterface* interrupt_pin)
     : SensorBase(i2c_address, i2c_debug, interrupt_pin)
 {
 
@@ -24,7 +24,7 @@ Lis2mdl::~Lis2mdl()
 }
 
 Lis2mdl* Lis2mdl::get_instance(uint8_t i2c_address, bool i2c_debug,
-    io::pin::Input* interrupt_pin)
+    io::DigitalInputPinInterface* interrupt_pin)
 {
     MXC_GetLock(&lock, 1);
     if (instance == nullptr)
@@ -49,12 +49,6 @@ int Lis2mdl::reset()
     while(rst);
     return err;
 }
-
-void Lis2mdl::set_sensor_error1(bool value)
-{
-    data_processor->set_mag_sensor_error(value);
-}
-
 bool Lis2mdl::is_device_id_valid()
 {
     uint8_t whoami = 0;
@@ -66,11 +60,10 @@ bool Lis2mdl::is_device_id_valid()
 int Lis2mdl::begin()
 {
     int err = E_NO_ERROR;
-    if (init_done) return err;
     err |= reset();
     if(!is_device_id_valid())
     {
-        set_sensor_error1(E_NO_DEVICE);
+        data_processor->set_magnetometer_sensor_error(true);
         return E_NO_DEVICE;
     }
     // Configure interrupt handler.
@@ -88,7 +81,7 @@ int Lis2mdl::begin()
     // Set power mode.
     err |= set_power_mode(PowerMode::POWER_DOWN);
 
-    set_sensor_error1(err);
+    data_processor->set_magnetometer_sensor_error(err != E_NO_ERROR);
     return err;
 }
 
@@ -99,12 +92,11 @@ int Lis2mdl::end()
     err |= attach_interrupt1_handler(false);
     if(!is_device_id_valid())
     {
-        set_sensor_error1(E_NO_DEVICE);
+        data_processor->set_magnetometer_sensor_error(true);
         return E_NO_DEVICE;
     }
     err |= set_power_mode(PowerMode::POWER_DOWN);
-    init_done = false;
-    set_sensor_error1(err);
+    data_processor->set_magnetometer_sensor_error(err != E_NO_ERROR);
     return err;
 }
 
@@ -135,24 +127,26 @@ int Lis2mdl::set_power_mode(PowerMode power_mode)
         break;
     }
 
-    set_sensor_error1(err);
+    data_processor->set_magnetometer_sensor_error(err != E_NO_ERROR);
     return err;
 }
 
 int Lis2mdl::handle_interrupt1()
 {
     int err = E_NO_ERROR;
+
     err |= lis2mdl_magnetic_raw_get(dev_ctx, raw_mag.i16bit);
-    err |= lis2mdl_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
-    
-    data_processor->update_mag_data(
+    data_processor->update_magnetometer_fusion_vector(
         {
             lis2mdl_from_lsb_to_mgauss(raw_mag.i16bit[0]),
             lis2mdl_from_lsb_to_mgauss(raw_mag.i16bit[1]),
             lis2mdl_from_lsb_to_mgauss(raw_mag.i16bit[2])
-        },
-        raw_temperature);
+        }
+    );
 
-    set_sensor_errors(err);
+    err |= lis2mdl_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
+    data_processor->update_temperature(raw_temperature);
+    
+    data_processor->set_magnetometer_sensor_error(err != E_NO_ERROR);
     return err;
 }

@@ -5,21 +5,17 @@
 #include "nvic_table.h"
 
 #include "src/sensor_fusion_board.h"
-#include "src/data_processor.h"
+#include "src/register_map.h"
 #include "src/debug_print.h"
 
-namespace io
-{
-namespace i2c
-{
+using namespace io;
 
 I2cSlave* I2cSlave::instance = nullptr;
 uint32_t I2cSlave::lock = 0;
 
 I2cSlave::I2cSlave()
-	: init_done{ false }
-	, transaction_done{ false }
-	, register_map{ DataProcessor::get_instance()->get_register_map() }
+	: transaction_done{ false }
+	, register_map{ Registermap::get_instance()->get_addressable_base() }
 {
 
 }
@@ -28,7 +24,6 @@ I2cSlave::~I2cSlave()
 {
 	NVIC_DisableIRQ(MXC_I2C_GET_IRQ(I2C_SLAVE));
 	MXC_I2C_Shutdown(MXC_I2C_GET_I2C(I2C_SLAVE));
-	init_done = false;
 }
 
 I2cSlave* I2cSlave::get_instance()
@@ -45,20 +40,13 @@ I2cSlave* I2cSlave::get_instance()
 int I2cSlave::begin()
 {
 	int err = E_NO_ERROR;
-
-    if (init_done) return err;
-
 	reset_state();
 
 	// Initialise I2C slave
-	err = MXC_I2C_Init(MXC_I2C_GET_I2C(I2C_SLAVE), 0, I2C_SLAVE_ADDR);
-	if (err != E_NO_ERROR) return err;
-
+	err |= MXC_I2C_Init(MXC_I2C_GET_I2C(I2C_SLAVE), 0, I2C_SLAVE_ADDR);
 	err = MXC_I2C_SetFrequency(MXC_I2C_GET_I2C(I2C_SLAVE), I2C_SLAVE_SPEED);
-	if (err < 0) return err;
-
-	err = MXC_I2C_SetClockStretching(MXC_I2C_GET_I2C(I2C_SLAVE), 1);
-	if (err < 0) return err;
+	if (err < 0) err |= E_FAIL;
+	err |= MXC_I2C_SetClockStretching(MXC_I2C_GET_I2C(I2C_SLAVE), 1);
 
 	// Enable I2C interrupt
 	MXC_NVIC_SetVector(MXC_I2C_GET_IRQ(I2C_SLAVE),
@@ -74,10 +62,7 @@ int I2cSlave::begin()
 		});
 	NVIC_EnableIRQ(MXC_I2C_GET_IRQ(I2C_SLAVE));
 
-	err = prepare_for_next_transaction();
-	if (err != E_NO_ERROR) return err;
-
-	init_done = true;
+	err |= prepare_for_next_transaction();
     return err;
 }
 
@@ -232,6 +217,3 @@ void I2cSlave::transaction_complete(int err)
 	// Reset i2c slave state.
 	reset_state();
 }
-
-} // namespace i2c
-} // namespace io

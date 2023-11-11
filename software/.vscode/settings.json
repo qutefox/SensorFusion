@@ -127,7 +127,10 @@
         "buffer": "cpp",
         "chrono": "cpp",
         "ctime": "cpp",
-        "netfwd": "cpp"
+        "netfwd": "cpp",
+        "forward_list": "cpp",
+        "list": "cpp",
+        "io_context": "cpp"
     }
 }
 

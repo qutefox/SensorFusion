@@ -1,9 +1,8 @@
 #pragma once
 
-#include "src/io/input_pin.h"
-#include "src/io/output_pin.h"
-#include "src/io/i2c_slave.h"
-
+#include "src/io/digital_input_pin_interface.h"
+#include "src/io/digital_output_pin_interface.h"
+#include "src/io/i2c_slave_interface.h"
 #include "src/sensor/sensor_interface.h"
 
 #define CONSOLE_UART 1 // UART instance to use for console
@@ -32,19 +31,18 @@
 class SensorFusionBoard
 {
 private:
-    bool init_done = false;
     static SensorFusionBoard* instance;
     static uint32_t lock;
 
-    io::pin::Output* led_pin = nullptr;
-    io::pin::Input* baro_int_pin = nullptr;
-    io::pin::Input* mag_int_pin = nullptr;
-    io::pin::Input* inertial_int1_pin = nullptr;
-    io::pin::Input* inertial_int2_pin = nullptr;
-    io::i2c::I2cSlave* i2c_slave = nullptr;
-    sensor::SensorInterface* baro_sensor = nullptr;
+    io::DigitalOutputPinInterface* led_pin = nullptr;
+    io::DigitalInputPinInterface* barometer_int_pin = nullptr;
+    io::DigitalInputPinInterface* inertial_int1_pin = nullptr;
+    io::DigitalInputPinInterface* inertial_int2_pin = nullptr;
+    io::DigitalInputPinInterface* magnetometer_int_pin = nullptr;
+    io::I2cSlaveInterface* i2c_slave = nullptr;
+    sensor::SensorInterface* barometer_sensor = nullptr;
     sensor::SensorInterface* inertial_sensor = nullptr;
-    sensor::SensorInterface* mag_sensor = nullptr;
+    sensor::SensorInterface* magnetometer_sensor = nullptr;
 
 protected:
     SensorFusionBoard();
@@ -58,11 +56,11 @@ public:
 
     int begin();
 
-    io::pin::Output* get_led_pin() const { return led_pin; }
-    io::i2c::I2cSlave* get_i2c_slave() const { return i2c_slave; }
-    sensor::SensorInterface* get_baro_sensor() const { return baro_sensor; }
+    io::DigitalOutputPinInterface* get_led_pin() const { return led_pin; }
+    io::I2cSlaveInterface* get_i2c_slave() const { return i2c_slave; }
+    sensor::SensorInterface* get_barometer_sensor() const { return barometer_sensor; }
     sensor::SensorInterface* get_inertial_sensor() const { return inertial_sensor; }
-    sensor::SensorInterface* get_mag_sensor() const { return mag_sensor; }
+    sensor::SensorInterface* get_magnetometer_sensor() const { return magnetometer_sensor; }
 
     void prep_for_sleep();
 };

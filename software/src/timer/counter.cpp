@@ -35,7 +35,7 @@ Counter* Counter::get_instance()
 
 int Counter::start_counter0(uint32_t frequency)
 {
-    continuous_timer->set_timer0_interrupt_callback(frequency,
+    return continuous_timer->set_timer0_interrupt_callback(frequency,
         []()
         {
             Counter* counter = Counter::get_instance();
@@ -62,7 +62,7 @@ uint32_t Counter::reset_counter0()
 
 int Counter::start_counter1(uint32_t frequency)
 {
-    continuous_timer->set_timer1_interrupt_callback(frequency,
+    return continuous_timer->set_timer1_interrupt_callback(frequency,
         []()
         {
             Counter* counter = Counter::get_instance();
@@ -89,7 +89,7 @@ uint32_t Counter::reset_counter1()
 
 int Counter::start_counter2(uint32_t frequency)
 {
-    continuous_timer->set_timer2_interrupt_callback(frequency,
+    return continuous_timer->set_timer2_interrupt_callback(frequency,
         []()
         {
             Counter* counter = Counter::get_instance();

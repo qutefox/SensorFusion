@@ -1,46 +1,35 @@
-#include "input_pin.h"
+#include "digital_input_pin.h"
 
 #include "mxc_device.h"
 #include "mxc_errors.h"
 #include "nvic_table.h"
 #include "lp.h"
 
-using namespace io::pin;
+using namespace io;
 
-Input::Input(mxc_gpio_regs_t *pin_port, uint32_t pin_mask, mxc_gpio_pad_t pullup_pulldown)
+DigitalInputPin::DigitalInputPin(mxc_gpio_regs_t *pin_port, uint32_t pin_mask, mxc_gpio_pad_t pullup_pulldown)
 {
     gpio.port = pin_port;
     gpio.mask = pin_mask;
     gpio.pad = pullup_pulldown;
 	gpio.func = MXC_GPIO_FUNC_IN;
 
-    MXC_GPIO_Init(gpio.mask);
+    MXC_GPIO_Config(&gpio);
 }
 
-Input::~Input()
+DigitalInputPin::~DigitalInputPin()
 {
-    MXC_GPIO_Shutdown(gpio.mask);
+    
 }
 
-int Input::begin()
-{
-    int err = MXC_GPIO_Config(&gpio);
-    if (err != E_NO_ERROR)
-    {
-        MXC_GPIO_Reset(gpio.mask);
-        return MXC_GPIO_Config(&gpio);
-    }
-    return err;
-}
-
-int Input::get(bool& value)
+int DigitalInputPin::read(bool& value)
 {
     value = false;
-    if (MXC_GPIO_OutGet(gpio.port, gpio.mask)) value = true;
+    if (MXC_GPIO_InGet(gpio.port, gpio.mask)) value = true;
     return E_NO_ERROR;
 }
 
-int Input::attach_interrupt_callback(mxc_gpio_callback_fn func, void* cbdata, mxc_gpio_int_pol_t pol)
+int DigitalInputPin::attach_interrupt_callback(mxc_gpio_callback_fn func, void* cbdata, mxc_gpio_int_pol_t pol)
 {
     MXC_GPIO_RegisterCallback(&gpio, func, cbdata);
     int err = MXC_GPIO_IntConfig(&gpio, pol);
@@ -55,14 +44,14 @@ int Input::attach_interrupt_callback(mxc_gpio_callback_fn func, void* cbdata, mx
     return E_NO_ERROR;
 }
 
-void Input::detach_interrupt_callback()
+void DigitalInputPin::detach_interrupt_callback()
 {
     MXC_GPIO_DisableInt(gpio.port, gpio.mask);
     NVIC_DisableIRQ((IRQn_Type) MXC_GPIO_GET_IRQ(MXC_GPIO_GET_IDX(gpio.port)));
     set_wake_up_enable(false);
 }
 
-void Input::set_wake_up_enable(bool enabled)
+void DigitalInputPin::set_wake_up_enable(bool enabled)
 {
     if (enabled)
     {
@@ -76,7 +65,7 @@ void Input::set_wake_up_enable(bool enabled)
     }
 }
 
-bool Input::is_wake_up_enabled()
+bool DigitalInputPin::is_wake_up_enabled()
 {
     return MXC_GPIO_GetWakeEn(gpio.port) & gpio.mask;
 }

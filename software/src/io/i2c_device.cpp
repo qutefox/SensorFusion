@@ -3,10 +3,7 @@
 #include "src/io/i2c_master.h"
 #include "src/debug_print.h"
 
-namespace io
-{
-namespace i2c
-{
+using namespace io;
 
 I2cDevice::I2cDevice(uint8_t address, bool _debug)
     : i2c_master{ I2cMaster::get_instance() }
@@ -117,6 +114,3 @@ int I2cDevice::write_bytes(uint8_t reg_addr, const uint8_t* value, unsigned int 
 
     return err;
 }
-
-} // namespace i2c
-} // namespace io

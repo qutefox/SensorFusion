@@ -3,52 +3,38 @@
 #include <stdint.h>
 
 #include "src/data_processor_interface.h"
+#include "src/register_map_interface.h"
 #include "src/sensor_fusion_board.h"
-#include "src/timer/counter.h"
 #include "src/Fusion/Fusion/Fusion.h"
 
 class DataProcessor : public DataProcessorInterface
 {
 private:
-    bool init_done = false;
     static DataProcessor* instance;
     static uint32_t lock;
 
-    storage::MultiRegisterInterface<uint8_t, uint8_t>* register_map;
+    RegistermapInterface* register_map = nullptr;
     SensorFusionBoard* board = nullptr;
-    timer::Counter* counter = nullptr;
-
-    storage::RegisterInterface<uint8_t, uint8_t>* sensor_error_register;
-    storage::RegisterInterface<uint8_t, uint8_t>* data_ready_register;
-    storage::RegisterInterface<uint8_t, uint8_t>* led_register;
-    storage::MultiRegisterInterface<uint8_t, uint8_t>* quat_registers;
-    storage::MultiRegisterInterface<uint8_t, uint8_t>* baro_pressure_registers;
-    storage::MultiRegisterInterface<uint8_t, uint8_t>* baro_temperature_registers;
-    storage::MultiRegisterInterface<uint8_t, uint8_t>* inertial_gyro_axis_registers;
-    storage::MultiRegisterInterface<uint8_t, uint8_t>* inertial_accel_axis_registers;
-    storage::MultiRegisterInterface<uint8_t, uint8_t>* inertial_temperature_registers;
-    storage::MultiRegisterInterface<uint8_t, uint8_t>* mag_axis_registers;
-    storage::MultiRegisterInterface<uint8_t, uint8_t>* mag_temperature_registers;
-
-    bool has_new_baro_data = false;
-    sensor::pressure_t baro_pressure_data;
-    sensor::temperature_t baro_temperature_data;
-
-    bool has_new_inertial_data = false;
-    sensor::axis3float_t inertial_gyro_data;
-    sensor::axis3float_t inertial_accel_data;
-    sensor::temperature_t inertial_temperature_data;
-
-    bool has_new_mag_data = false;
-    sensor::axis3float_t mag_data;
-    sensor::temperature_t mag_temperature_data;
 
     FusionAhrs ahrs;
-    FusionQuaternion fusion_quaternion;
+    FusionQuaternion quaternion_fqvect = {0.0f, 0.0f, 0.0f, 0.0f};
+    FusionVector gyroscope_fvect = {0.0f, 0.0f, 0.0f};
+    FusionVector accelerometer_fvect = {0.0f, 0.0f, 0.0f};
+    FusionVector magnetometer_fvect = {0.0f, 0.0f, 0.0f};
 
-    void create_register_map();
+    sensor::pressure_t pressure = {0};
+    sensor::temperature_t temperature = {0};
+    sensor::timestamp_t timestamp = {0};
+    sensor::timestamp_t previous_timestamp = {0};
 
-    void update_data_ready_flags_and_write_new_data();
+    // void update_data_ready_flags_and_write_new_data();
+
+    void handle_change_in_board_control_register();
+    void handle_change_in_fusion_control_register();
+    void handle_change_in_sensor_control();
+    void handle_change_in_sensor_calibration_control_register();
+
+    float get_time_delta();
 
 protected:
     DataProcessor();
@@ -60,20 +46,19 @@ public:
 
     static DataProcessor* get_instance();
 
-    int begin();
-
-    virtual storage::MultiRegisterInterface<uint8_t, uint8_t>* get_register_map() const override;
-
     virtual void update_register_map() override;
     virtual void update_fusion() override;
 
-    virtual void set_gyro_sensor_error(bool error) override;
-    virtual void set_accel_sensor_error(bool error) override;
-    virtual void set_mag_sensor_error(bool error) override;
-    virtual void set_baro_sensor_error(bool error) override;
-    virtual bool has_sensor_error() const override;
+    virtual void update_gyroscope_fusion_vector(const FusionVector& gyroscope_data) override;
+    virtual void update_accelerometer_fusion_vector(const FusionVector& accelerometer_data) override;
+    virtual void update_magnetometer_fusion_vector(const FusionVector& magnetometer_data) override;
+    virtual void update_pressure(sensor::pressure_t pressure_data) override;
+    virtual void update_temperature(sensor::temperature_t temperature_data) override;
+    virtual void update_timestamp(sensor::timestamp_t timestamp_data) override;
 
-    virtual void update_baro_data(const sensor::pressure_t& pressure, const sensor::temperature_t& temperature) override;
-    virtual void update_inertial_data(const sensor::axis3float_t& gyro, const sensor::axis3float_t& accel, const sensor::temperature_t& temperature) override;
-    virtual void update_mag_data(const sensor::axis3float_t& mag, const sensor::temperature_t& temperature) override;
+    virtual void set_gyroscope_sensor_error(bool error) override;
+    virtual void set_accelerometer_sensor_error(bool error) override;
+    virtual void set_magnetometer_sensor_error(bool error) override;
+    virtual void set_barometer_sensor_error(bool error) override;
+    virtual bool has_sensor_error() const override;
 };

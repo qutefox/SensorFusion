@@ -34,14 +34,6 @@ int main()
 	}
 
 	DataProcessor* data_processor = DataProcessor::get_instance();
-	if (data_processor->begin() != E_NO_ERROR)
-	{
-		debug_print("Failed to initaise data processor.\n");
-	}
-	else
-	{
-		debug_print("Data processor successfully initaised.\n");
-	}
 
 	__enable_irq();
 
@@ -51,14 +43,10 @@ int main()
 	{
 		// Changes are made in an interrupt handler where we cannot process them.
 		// So we process them here after waking up for any reason.
-		debug_print("Entering sleep!\n");
 		board->prep_for_sleep();
 		MXC_LP_EnterSleepMode();
-		debug_print("Woken up!\n");
 		data_processor->update_register_map();
     }
-
-	debug_print("Should never get here.\n");
 
     return E_NO_ERROR;
 }

@@ -14,18 +14,19 @@ private:
     static Lsm6dsm* instance;
     static uint32_t lock;
 
+    uint8_t gyroscope_data_ready = 0;
+    uint8_t accelerometer_data_ready = 0;
     temperature_t raw_temperature;
-    axis3bit16_t raw_gyro;
-    axis3bit16_t raw_accel;
+    axis3bit16_t raw_gyroscope;
+    axis3bit16_t raw_accelerometer;
+    timestamp_t raw_timestamp;
 
     virtual int reset() override;
-    virtual inline void set_sensor_error1(bool value) override;
-    virtual inline void set_sensor_error2(bool value) override;
     virtual bool is_device_id_valid() override;
 
 protected:
     Lsm6dsm(uint8_t i2c_address, bool i2c_debug=false,
-        io::pin::Input* interrupt_pin1=nullptr, io::pin::Input* interrupt_pin2=nullptr);
+        io::DigitalInputPinInterface* interrupt_pin1=nullptr, io::DigitalInputPinInterface* interrupt_pin2=nullptr);
     virtual ~Lsm6dsm();
 
 public:
@@ -33,7 +34,7 @@ public:
     void operator=(const Lsm6dsm& other) = delete;
 
     static Lsm6dsm* get_instance(uint8_t i2c_address, bool i2c_debug=false,
-        io::pin::Input* interrupt_pin1=nullptr, io::pin::Input* interrupt_pin2=nullptr);
+        io::DigitalInputPinInterface* interrupt_pin1=nullptr, io::DigitalInputPinInterface* interrupt_pin2=nullptr);
 
     virtual int begin() override;
     virtual int end() override;

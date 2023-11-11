@@ -4,15 +4,14 @@
 
 #include "i2c.h"
 
+#include "src/io/i2c_master_interface.h"
+
 namespace io
 {
-namespace i2c
-{
 
-class I2cMaster
+class I2cMaster : public I2cMasterInterface
 {
 private:
-    bool init_done = false;
     static I2cMaster* instance;
     static uint32_t lock;
 
@@ -26,12 +25,11 @@ public:
 
     static I2cMaster* get_instance();
 
-    int begin();
+    virtual int begin() override;
     
-    void scan();
-    int transfer(mxc_i2c_req_t* req, uint8_t* tx_data, unsigned int tx_size, uint8_t* rx_data, unsigned int rx_size);
-    int recover();
+    virtual void scan() override;
+    virtual int transfer(mxc_i2c_req_t* req, uint8_t* tx_data, unsigned int tx_size, uint8_t* rx_data, unsigned int rx_size) override;
+    virtual int recover() override;
 };
 
-} // namespace i2c
 } // namespace io
