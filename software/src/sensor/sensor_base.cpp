@@ -15,6 +15,8 @@ SensorBase::SensorBase(uint8_t i2c_address, bool i2c_debug,
     , dev_ctx{ new stmdev_ctx_t() }
     , interrupt_pin1{ interrupt_pin1 }
     , interrupt_pin2{ interrupt_pin2 }
+    , interrupt1_active{ false }
+    , interrupt2_active{ false }
 {
     i2c_device->begin();
 
@@ -53,7 +55,7 @@ int SensorBase::attach_interrupt1_handler(bool attached)
         return interrupt_pin1->attach_interrupt_callback(
             [](void* this_obj) -> void
             {
-                static_cast<SensorBase*>(this_obj)->handle_interrupt1();
+                static_cast<SensorBase*>(this_obj)->set_interrupt1_active();
             }, this);
     }
     interrupt_pin1->detach_interrupt_callback();
@@ -68,7 +70,7 @@ int SensorBase::attach_interrupt2_handler(bool attached)
         return interrupt_pin2->attach_interrupt_callback(
             [](void* this_obj) -> void
             {
-                static_cast<SensorBase*>(this_obj)->handle_interrupt2();
+                static_cast<SensorBase*>(this_obj)->set_interrupt2_active();
             }, this);
     }
     interrupt_pin2->detach_interrupt_callback();
@@ -85,16 +87,41 @@ void SensorBase::set_interrupt_pin2(io::DigitalInputPinInterface* interrupt_pin)
     interrupt_pin2 = interrupt_pin;
 }
 
+void SensorBase::set_interrupt1_active()
+{
+    interrupt1_active = true;
+}
+
+void SensorBase::set_interrupt2_active()
+{
+    interrupt2_active = true;
+}
+
+
+bool SensorBase::has_interrupt1()
+{
+    return interrupt1_active;
+}
+
+bool SensorBase::has_interrupt2()
+{
+    return interrupt2_active;
+}
+
 int SensorBase::handle_interrupt1()
 {
-    // Most probably read new sensor data and process/store it.
-    // You should override this method in your derived class.
     return E_NO_ERROR;
 }
 
 int SensorBase::handle_interrupt2()
 {
-    // Most probably read new sensor data and process/store it.
-    // You should override this method in your derived class.
     return E_NO_ERROR;
+}
+
+int SensorBase::handle_possible_interrupt()
+{
+    int err = E_NO_ERROR;
+    if (interrupt1_active) err |= handle_interrupt1();
+    if (interrupt2_active) err |= handle_interrupt2();
+    return err;
 }

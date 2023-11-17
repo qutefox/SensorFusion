@@ -66,6 +66,7 @@ int Lsm6dsm::begin()
     int err = E_NO_ERROR;
     int err1 = E_NO_ERROR;
     int err2 = E_NO_ERROR;
+
     err |= reset();
     if(!is_device_id_valid())
     {
@@ -73,12 +74,10 @@ int Lsm6dsm::begin()
         data_processor->set_accelerometer_sensor_error(true);
         return E_NO_DEVICE;
     }
-     // Configure interrupt handler(s).
-    err |= attach_interrupt1_handler(true);
-    err |= attach_interrupt2_handler(true);
+
     // Set High Resolution Timestamp (25 us tick).
     err |= lsm6dsm_timestamp_res_set(dev_ctx, LSM6DSM_LSB_25us);
-    // Enable timestamp in HW .
+    // Enable timestamp in HW.
     err |= lsm6dsm_timestamp_set(dev_ctx, PROPERTY_ENABLE);
     // Enable block data update.
     err |= lsm6dsm_block_data_update_set(dev_ctx, PROPERTY_ENABLE);
@@ -96,22 +95,22 @@ int Lsm6dsm::begin()
     err2 |= lsm6dsm_xl_full_scale_set(dev_ctx, LSM6DSM_2g);
     // Set accel low pass filter 2.
     err2 |= lsm6dsm_xl_lp2_bandwidth_set(dev_ctx, LSM6DSM_XL_LOW_NOISE_LP_ODR_DIV_9);
-
     // Enable gyroscope, accelerometer interrupt generation on INT1 pin.
     lsm6dsm_int1_route_t int1_reg;
     err |= lsm6dsm_pin_int1_route_get(dev_ctx, &int1_reg);
     int1_reg.int1_drdy_g = PROPERTY_ENABLE;
     int1_reg.int1_drdy_xl = PROPERTY_ENABLE;
     err |= lsm6dsm_pin_int1_route_set(dev_ctx, int1_reg);
-
     // Enable temperature interrupt generation on INT2 pin.
     lsm6dsm_int2_route_t int2_reg;
     err |= lsm6dsm_pin_int2_route_get(dev_ctx, &int2_reg);
     int2_reg.int2_drdy_temp = PROPERTY_ENABLE;
     err |= lsm6dsm_pin_int2_route_set(dev_ctx, int2_reg);
-
     // Set power mode.
     err |= set_power_mode(PowerMode::POWER_DOWN);
+    // Configure interrupt handler(s).
+    err |= attach_interrupt1_handler(true);
+    err |= attach_interrupt2_handler(true);
 
     if (err != E_NO_ERROR)
     {
@@ -172,7 +171,7 @@ int Lsm6dsm::set_power_mode(PowerMode power_mode)
     case PowerMode::LOW_POWER:
         // Low power for odrs: 12.5Hz, 26Hz and 52Hz.
         err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_52Hz);
-        err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_52Hz);
+        err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_26Hz);
         break;
     case PowerMode::NORMAL:
         // Normal for odrs: 104Hz and 208Hz.
@@ -195,6 +194,12 @@ int Lsm6dsm::set_power_mode(PowerMode power_mode)
     {
         data_processor->set_gyroscope_sensor_error(err1 != E_NO_ERROR);
         data_processor->set_accelerometer_sensor_error(err2 != E_NO_ERROR);
+
+        if (power_mode != PowerMode::POWER_DOWN)
+        {
+            handle_interrupt1();
+            handle_interrupt2();
+        }
     }
     
     return err || err1 || err2;
@@ -202,6 +207,7 @@ int Lsm6dsm::set_power_mode(PowerMode power_mode)
 
 int Lsm6dsm::handle_interrupt1()
 {
+    // if (sdebug) debug_print("Lsm6dsm::handle_interrupt1().\n");
     int err = lsm6dsm_data_ready_get(dev_ctx, &gyroscope_data_ready, &accelerometer_data_ready);
     if (err != E_NO_ERROR)
     {
@@ -250,6 +256,7 @@ int Lsm6dsm::handle_interrupt1()
 
 int Lsm6dsm::handle_interrupt2()
 {
+    // if (sdebug) debug_print("Lsm6dsm::handle_interrupt2().\n");
     int err = lsm6dsm_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
     if (err == E_NO_ERROR)
     {

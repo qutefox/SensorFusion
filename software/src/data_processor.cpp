@@ -63,16 +63,15 @@ void DataProcessor::update_register_map()
 void DataProcessor::update_fusion()
 {
     // This method should be called repeatedly each time new gyroscope data is available.
-
-    // float deltaTime = get_time_delta();
-    // FusionAhrsUpdate(&ahrs, gyroscope_fvect, accelerometer_fvect, magnetometer_fvect, deltaTime);
-    // quaternion_fqvect = FusionAhrsGetQuaternion(&ahrs);
+    FusionAhrsUpdate(&ahrs, gyroscope_fvect, accelerometer_fvect, magnetometer_fvect, get_time_delta());
+    quaternion_fqvect = FusionAhrsGetQuaternion(&ahrs);
+    // TODO: register_map->get_quaternion_fusion_registers()->write(reinterpret_cast<uint8_t*>(quaternion_fqvect.array), false, false);
 }
 
 void DataProcessor::update_gyroscope_fusion_vector(const FusionVector& gyroscope_data)
 {
     gyroscope_fvect = gyroscope_data;
-    // update_fusion();
+    update_fusion();
 }
 
 void DataProcessor::update_accelerometer_fusion_vector(const FusionVector& accelerometer_data)
@@ -88,7 +87,6 @@ void DataProcessor::update_magnetometer_fusion_vector(const FusionVector& magnet
 void DataProcessor::update_pressure(sensor::pressure_t pressure_data)
 {
     pressure = pressure_data;
-    debug_print("delta time: %f.\n", get_time_delta());
 }
 
 void DataProcessor::update_temperature(sensor::temperature_t temperature_data)
@@ -103,11 +101,10 @@ void DataProcessor::update_timestamp(sensor::timestamp_t timestamp_data)
 
 float DataProcessor::get_time_delta()
 {
-    // Note: both values are unsigned.
-    // If the result would be negative then we get a really big positive number.
+    // We multiply by 25 because the timestamp generation (in LSM6DSM) has 25 microsecond resolution set.
     uint32_t diff_microseconds = (timestamp.u32bit - previous_timestamp.u32bit) * 25;
     previous_timestamp = timestamp;
-    return static_cast<float>(diff_microseconds) / 1000000;
+    return static_cast<float>(diff_microseconds) / 1000000; // Convert microsecond to second.
 }
 
 void DataProcessor::set_gyroscope_sensor_error(bool error)

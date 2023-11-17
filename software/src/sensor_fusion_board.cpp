@@ -4,6 +4,7 @@
 #include "nvic_table.h"
 #include "mxc_errors.h"
 #include "mxc_lock.h"
+#include "mxc_delay.h"
 #include "uart.h"
 
 #include "src/io/digital_input_pin.h"
@@ -19,6 +20,8 @@ uint32_t SensorFusionBoard::lock = 0;
 
 SensorFusionBoard::SensorFusionBoard()
     : led_pin{ nullptr }
+    , host_interrupt_pin{ nullptr }
+    , i2c_slave_address_select_pin{ nullptr }
     , barometer_int_pin{ nullptr }
     , inertial_int1_pin{ nullptr }
     , inertial_int2_pin{ nullptr }
@@ -55,8 +58,17 @@ int SensorFusionBoard::begin()
 {
     int err = E_NO_ERROR;
 
+    MXC_Delay(MXC_DELAY_MSEC(100));
+
     led_pin = new io::DigitalOutputPin(MXC_GPIO0, LED_PIN_MASK);
     led_pin->write(true);
+
+#ifndef ENABLE_DEBUG_PRINT
+    host_interrupt_pin = new io::DigitalOutputPin(MXC_GPIO0, HOSTINT_PIN_MASK);
+    host_interrupt_pin->write(true); // Active low, push pull.
+#endif
+
+    i2c_slave_address_select_pin = new io::DigitalInputPin(MXC_GPIO0, AD0_MASK__SWDCLK_MASK, mxc_gpio_pad_t::MXC_GPIO_PAD_PULL_DOWN);
 
     barometer_int_pin = new io::DigitalInputPin(MXC_GPIO0, BARO_INT_MASK);
     inertial_int1_pin = new io::DigitalInputPin(MXC_GPIO0, INERTIAL_INT1_MASK);
@@ -73,15 +85,22 @@ int SensorFusionBoard::begin()
     magnetometer_sensor = sensor::Lis2mdl::get_instance(LIS2MDL_I2C_ADDR, false, magnetometer_int_pin);
     err |= magnetometer_sensor->begin();
 
+    bool ad0_input_pin_value = 0;
+    err |= i2c_slave_address_select_pin->read(ad0_input_pin_value);
+    i2c_slave_address_select_pin->set_pullup_pulldown(mxc_gpio_pad_t::MXC_GPIO_PAD_NONE);
+
     i2c_slave = io::I2cSlave::get_instance();
-    err |= i2c_slave->begin();
+    err |= i2c_slave->begin(I2C_SLAVE_ADDR + (ad0_input_pin_value ? 1 : 0));
+
+    inertial_sensor->set_power_mode(sensor::PowerMode::LOW_POWER);
+    barometer_sensor->set_power_mode(sensor::PowerMode::LOW_POWER);
 
     led_pin->write(false);
 
     return err;
 }
 
-void SensorFusionBoard::prep_for_sleep()
+void SensorFusionBoard::prepare_for_sleep()
 {
 #ifdef ENABLE_DEBUG_PRINT
     while (MXC_UART_ReadyForSleep(MXC_UART_GET_UART(CONSOLE_UART)) != E_NO_ERROR) {}

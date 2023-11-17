@@ -12,6 +12,7 @@ namespace io
 class I2cMaster : public I2cMasterInterface
 {
 private:
+    bool init_done = false;
     static I2cMaster* instance;
     static uint32_t lock;
 

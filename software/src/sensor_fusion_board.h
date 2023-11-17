@@ -20,6 +20,8 @@
 #define LSM6DSM_I2C_ADDR 0x6A
 #define LIS2MDL_I2C_ADDR 0x1E
 
+#define SWDIO_MASK MXC_GPIO_PIN_0 // We only use it after startup. We could use it for something later on.
+#define AD0_MASK__SWDCLK_MASK MXC_GPIO_PIN_1 // Free pin after startup. We could use it for something.
 #define BARO_INT_MASK MXC_GPIO_PIN_4
 #define MAG_INT_MASK MXC_GPIO_PIN_5
 #define INERTIAL_INT2_MASK MXC_GPIO_PIN_6
@@ -35,6 +37,8 @@ private:
     static uint32_t lock;
 
     io::DigitalOutputPinInterface* led_pin = nullptr;
+    io::DigitalOutputPinInterface* host_interrupt_pin = nullptr;
+    io::DigitalInputPinInterface* i2c_slave_address_select_pin = nullptr;
     io::DigitalInputPinInterface* barometer_int_pin = nullptr;
     io::DigitalInputPinInterface* inertial_int1_pin = nullptr;
     io::DigitalInputPinInterface* inertial_int2_pin = nullptr;
@@ -57,11 +61,12 @@ public:
     int begin();
 
     io::DigitalOutputPinInterface* get_led_pin() const { return led_pin; }
+    io::DigitalOutputPinInterface* get_host_interrupt_pin() const { return host_interrupt_pin; }
     io::I2cSlaveInterface* get_i2c_slave() const { return i2c_slave; }
     sensor::SensorInterface* get_barometer_sensor() const { return barometer_sensor; }
     sensor::SensorInterface* get_inertial_sensor() const { return inertial_sensor; }
     sensor::SensorInterface* get_magnetometer_sensor() const { return magnetometer_sensor; }
 
-    void prep_for_sleep();
+    void prepare_for_sleep();
 };
 

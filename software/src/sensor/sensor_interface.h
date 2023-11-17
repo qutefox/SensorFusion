@@ -22,6 +22,9 @@ protected:
     virtual int attach_interrupt1_handler(bool attached) = 0;
     virtual int attach_interrupt2_handler(bool attached) = 0;
 
+    virtual int handle_interrupt1() = 0;
+    virtual int handle_interrupt2() = 0;
+
 public:
     SensorInterface()  
     { }
@@ -36,8 +39,10 @@ public:
     virtual void set_interrupt_pin1(io::DigitalInputPinInterface* interrupt_pin) = 0;
     virtual void set_interrupt_pin2(io::DigitalInputPinInterface* interrupt_pin) = 0;
 
-    virtual int handle_interrupt1() = 0;
-    virtual int handle_interrupt2() = 0;
+    virtual bool has_interrupt1() = 0;
+    virtual bool has_interrupt2() = 0;
+
+    virtual int handle_possible_interrupt() = 0;
 };
 
 } // namespace sensor

@@ -12,7 +12,6 @@ I2cDevice::I2cDevice(uint8_t address, bool _debug)
     req.addr = address;
     req.restart = 0;
     req.callback = nullptr;
-    debug = false;
 }
 
 I2cDevice::~I2cDevice()
@@ -33,9 +32,14 @@ int I2cDevice::read_reg(uint8_t reg_addr, uint8_t& value)
 
     if (err != E_NO_ERROR)
     {
-        if (debug) debug_print("I2C Device [0x%02x]: Failed to read register 0x%02x. Error code: %d.\n", req.addr, reg_addr, err);
+        if (debug) debug_print("I2C Device [0x%02x]: Failed to read register 0x%02x. Error code: %d. Doing recovery then trying again.\n", req.addr, reg_addr, err);
         i2c_master->recover();
-        return err;
+        err = i2c_master->transfer(&req, &reg_addr, 1, &value, 1);
+        if (err != E_NO_ERROR)
+        {
+            if (debug) debug_print("I2C Device [0x%02x]: Failed to read register 0x%02x. Error code: %d. Recovery failed.\n", req.addr, reg_addr, err);
+            return err;
+        }
     }
 
     if (debug) debug_print("I2C Device [0x%02x]: Read register 0x%02x. Value: 0x%02x.\n", req.addr, reg_addr, value);
@@ -50,9 +54,14 @@ int I2cDevice::read_bytes(uint8_t reg_addr, uint8_t* value, unsigned int read_le
 
     if (err != E_NO_ERROR)
     {
-        if (debug) debug_print("I2C Device [0x%02x]: Failed to read register 0x%02x. Read length: %d. Error code: %d.\n", req.addr, reg_addr, read_len, err);
+        if (debug) debug_print("I2C Device [0x%02x]: Failed to read register 0x%02x. Read length: %d. Error code: %d. Doing recovery then trying again.\n", req.addr, reg_addr, read_len, err);
         i2c_master->recover();
-        return err;
+        err = i2c_master->transfer(&req, &reg_addr, 1, value, read_len);
+        if (err != E_NO_ERROR)
+        {
+            if (debug) debug_print("I2C Device [0x%02x]: Failed to read register 0x%02x. Read length: %d. Error code: %d. Recovery failed.\n", req.addr, reg_addr, read_len, err);
+            return err;
+        }
     }
 
     if (debug)
@@ -78,9 +87,14 @@ int I2cDevice::write_reg(uint8_t reg_addr, uint8_t value)
 
     if (err != E_NO_ERROR)
     {
-        if (debug) debug_print("I2C Device [0x%02x]: Failed to write register 0x%02x. Error code: %d.\n", req.addr, err);
+        if (debug) debug_print("I2C Device [0x%02x]: Failed to write register 0x%02x. Error code: %d. Doing recovery then trying again.\n", req.addr, err);
         i2c_master->recover();
-        return err;
+        err = i2c_master->transfer(&req, &buf[0], 2, nullptr, 0);
+        if (err != E_NO_ERROR)
+        {
+            if (debug) debug_print("I2C Device [0x%02x]: Failed to write register 0x%02x. Error code: %d. Recovery failed.\n", req.addr, err);
+            return err;
+        }
     }
 
     return err;
@@ -107,9 +121,14 @@ int I2cDevice::write_bytes(uint8_t reg_addr, const uint8_t* value, unsigned int 
 
     if (err != E_NO_ERROR)
     {
-        if (debug) debug_print("I2C Device [0x%02x]: Failed to write register 0x%02x. Error code: %d.\n", req.addr, err);
+        if (debug) debug_print("I2C Device [0x%02x]: Failed to write register 0x%02x. Error code: %d. Doing recovery then trying again.\n", req.addr, err);
         i2c_master->recover();
-        return err;
+        err = i2c_master->transfer(&req, &buf[0], write_len + 1, nullptr, 0);
+        if (err != E_NO_ERROR)
+        {
+            if (debug) debug_print("I2C Device [0x%02x]: Failed to write register 0x%02x. Error code: %d. Recovery failed.\n", req.addr, err);
+            return err;
+        }
     }
 
     return err;

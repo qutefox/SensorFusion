@@ -31,6 +31,8 @@ protected:
         io::DigitalInputPinInterface* interrupt_pin=nullptr);
     virtual ~Lps22hb();
 
+    virtual inline int handle_interrupt1() override;
+
 public:
     Lps22hb(Lps22hb& other) = delete;
     void operator=(const Lps22hb& other) = delete;
@@ -41,7 +43,6 @@ public:
     virtual int begin() override;
     virtual int end() override;
     virtual int set_power_mode(PowerMode power_mode) override;
-    virtual inline int handle_interrupt1() override;
 };
 
 

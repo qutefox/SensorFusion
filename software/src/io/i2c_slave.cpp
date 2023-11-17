@@ -37,13 +37,13 @@ I2cSlave* I2cSlave::get_instance()
     return instance;
 }
 
-int I2cSlave::begin()
+int I2cSlave::begin(uint8_t slave_address)
 {
 	int err = E_NO_ERROR;
 	reset_state();
 
 	// Initialise I2C slave
-	err |= MXC_I2C_Init(MXC_I2C_GET_I2C(I2C_SLAVE), 0, I2C_SLAVE_ADDR);
+	err |= MXC_I2C_Init(MXC_I2C_GET_I2C(I2C_SLAVE), 0, slave_address);
 	err = MXC_I2C_SetFrequency(MXC_I2C_GET_I2C(I2C_SLAVE), I2C_SLAVE_SPEED);
 	if (err < 0) err |= E_FAIL;
 	err |= MXC_I2C_SetClockStretching(MXC_I2C_GET_I2C(I2C_SLAVE), 1);
@@ -155,9 +155,11 @@ int I2cSlave::event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, vo
 
 void I2cSlave::send_data()
 {
-	// Read address check is built into the read.
-	register_map->read(address, tx_byte, true);
-	address += MXC_I2C_WriteTXFIFO(MXC_I2C_GET_I2C(I2C_SLAVE), &tx_byte, 1);
+	if (register_map->is_valid_address(address))
+	{
+		register_map->read(address, tx_byte, true);
+		address += MXC_I2C_WriteTXFIFO(MXC_I2C_GET_I2C(I2C_SLAVE), &tx_byte, 1);
+	}
 }
 
 void I2cSlave::receive_data()

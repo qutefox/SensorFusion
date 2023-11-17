@@ -47,7 +47,7 @@ public:
 
     static I2cSlave* get_instance();
 
-    virtual int begin() override;
+    virtual int begin(uint8_t slave_address) override;
     int prepare_for_next_transaction();
     virtual bool is_current_transaction_done() const override { return transaction_done; }
 };

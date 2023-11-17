@@ -22,6 +22,8 @@ protected:
     stmdev_ctx_t* dev_ctx = nullptr;
     io::DigitalInputPinInterface* interrupt_pin1 = nullptr;
     io::DigitalInputPinInterface* interrupt_pin2 = nullptr;
+    bool interrupt1_active = false;
+    bool interrupt2_active = false;
 
     virtual int reset() = 0;
     virtual bool is_device_id_valid() = 0;
@@ -29,6 +31,9 @@ protected:
     virtual int attach_interrupt1_handler(bool attached) override;
     virtual int attach_interrupt2_handler(bool attached) override;
 
+    virtual int handle_interrupt1() override;
+    virtual int handle_interrupt2() override;
+    
 public:
     SensorBase(uint8_t i2c_address, bool i2c_debug=false,
         io::DigitalInputPinInterface* interrupt_pin1=nullptr,
@@ -43,8 +48,13 @@ public:
     virtual void set_interrupt_pin1(io::DigitalInputPinInterface* interrupt_pin) override;
     virtual void set_interrupt_pin2(io::DigitalInputPinInterface* interrupt_pin) override;
     
-    virtual int handle_interrupt1() override;
-    virtual int handle_interrupt2() override;
+    void set_interrupt1_active();
+    void set_interrupt2_active();
+
+    virtual bool has_interrupt1() override;
+    virtual bool has_interrupt2() override;
+
+    virtual int handle_possible_interrupt() override;
 };
 
 } // namespace sensor

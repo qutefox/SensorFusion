@@ -29,6 +29,9 @@ protected:
         io::DigitalInputPinInterface* interrupt_pin1=nullptr, io::DigitalInputPinInterface* interrupt_pin2=nullptr);
     virtual ~Lsm6dsm();
 
+    virtual inline int handle_interrupt1() override;
+    virtual inline int handle_interrupt2() override;
+
 public:
     Lsm6dsm(Lsm6dsm& other) = delete;
     void operator=(const Lsm6dsm& other) = delete;
@@ -39,8 +42,6 @@ public:
     virtual int begin() override;
     virtual int end() override;
     virtual int set_power_mode(PowerMode power_mode) override;
-    virtual inline int handle_interrupt1() override;
-    virtual inline int handle_interrupt2() override;
 };
 
 } // namespace sensor

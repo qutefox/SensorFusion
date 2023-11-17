@@ -19,6 +19,8 @@ public:
 
     virtual void set_wake_up_enable(bool enabled) override;
     virtual bool is_wake_up_enabled() override;
+
+    virtual void set_pullup_pulldown(mxc_gpio_pad_t pullup_pulldown) override;
 };
 
 } // namespace io

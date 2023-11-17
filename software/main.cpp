@@ -24,6 +24,9 @@ int main()
 	debug_print("\n\nMAX32660 started with debug info.\n");
 
 	SensorFusionBoard* board = SensorFusionBoard::get_instance();
+
+	debug_print("About to initaise board.\n");
+
 	if (board->begin() != E_NO_ERROR)
 	{
 		debug_print("Failed to initaise board.\n");
@@ -43,8 +46,16 @@ int main()
 	{
 		// Changes are made in an interrupt handler where we cannot process them.
 		// So we process them here after waking up for any reason.
-		board->prep_for_sleep();
+		board->prepare_for_sleep();
 		MXC_LP_EnterSleepMode();
+		// MXC_LP_EnterDeepSleepMode();
+
+		// Handle sensor interrupt(s).
+		board->get_magnetometer_sensor()->handle_possible_interrupt();
+		board->get_inertial_sensor()->handle_possible_interrupt();
+		board->get_barometer_sensor()->handle_possible_interrupt();
+
+		// Handle registermap update(s).
 		data_processor->update_register_map();
     }
 

@@ -25,6 +25,8 @@ protected:
         io::DigitalInputPinInterface* interrupt_pin1=nullptr);
     virtual ~Lis2mdl();
 
+    virtual inline int handle_interrupt1() override;
+
 public:
     Lis2mdl(Lis2mdl& other) = delete;
     void operator=(const Lis2mdl& other) = delete;
@@ -35,7 +37,6 @@ public:
     virtual int begin() override;
     virtual int end() override;
     virtual int set_power_mode(PowerMode power_mode) override;
-    virtual inline int handle_interrupt1() override;
 };
 
 } // namespace sensor

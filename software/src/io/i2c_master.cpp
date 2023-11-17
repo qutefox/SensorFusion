@@ -13,8 +13,9 @@ I2cMaster* I2cMaster::instance = nullptr;
 uint32_t I2cMaster::lock = 0;
 
 I2cMaster::I2cMaster()
+    : init_done{ false }
 {
-	
+
 }
 
 I2cMaster::~I2cMaster()
@@ -36,6 +37,7 @@ I2cMaster* I2cMaster::get_instance()
 int I2cMaster::begin()
 {
     int err = E_NO_ERROR;
+    if (init_done) return err;
 
     err = MXC_I2C_Init(MXC_I2C_GET_I2C(I2C_MASTER), 1, 0);
     if (err != E_NO_ERROR) return err;
@@ -46,6 +48,7 @@ int I2cMaster::begin()
     err = MXC_I2C_SetClockStretching(MXC_I2C_GET_I2C(I2C_MASTER), I2C_MASTER_CLOCK_STRETCHING);
     if (err != E_NO_ERROR) return err;
 
+    init_done = true;
     return err;
 }
 
@@ -91,5 +94,5 @@ int I2cMaster::transfer(mxc_i2c_req_t* req, uint8_t* tx_data, unsigned int tx_si
 
 int I2cMaster::recover()
 {
-    return MXC_I2C_Recover(MXC_I2C_GET_I2C(I2C_MASTER), 16);
+    return MXC_I2C_Recover(MXC_I2C_GET_I2C(I2C_MASTER), 24);
 }

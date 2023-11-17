@@ -6,6 +6,7 @@
 #include "mxc_lock.h"
 
 #include "src/sensor/lps22hb-pid/lps22hb_reg.h"
+#include "src/debug_print.h"
 
 using namespace sensor;
 
@@ -69,8 +70,6 @@ int Lps22hb::begin()
         return E_NO_DEVICE;
     }
 
-    // Configure interrupt handler.
-    err |= attach_interrupt1_handler(true);
     // Enable block data update.
     err |= lps22hb_block_data_update_set(dev_ctx, PROPERTY_ENABLE);
     // Enable i2c address auto increment.
@@ -85,6 +84,8 @@ int Lps22hb::begin()
     err |= lps22hb_low_pass_filter_mode_set(dev_ctx, LPS22HB_LPF_ODR_DIV_2);
     // Set power mode.
     err |= set_power_mode(PowerMode::POWER_DOWN);
+    // Configure interrupt handler.
+    err |= attach_interrupt1_handler(true);
 
     data_processor->set_barometer_sensor_error(err != E_NO_ERROR);
     return err;
@@ -117,7 +118,7 @@ int Lps22hb::set_power_mode(PowerMode power_mode)
         break;
     case PowerMode::LOW_POWER:
         err |= lps22hb_low_power_set(dev_ctx, PROPERTY_ENABLE);
-        err |= lps22hb_data_rate_set(dev_ctx, LPS22HB_ODR_1_Hz);
+        err |= lps22hb_data_rate_set(dev_ctx, LPS22HB_ODR_10_Hz);
         break;
     case PowerMode::NORMAL:
         err |= lps22hb_low_power_set(dev_ctx, PROPERTY_DISABLE);
@@ -130,6 +131,9 @@ int Lps22hb::set_power_mode(PowerMode power_mode)
     }
 
     data_processor->set_barometer_sensor_error(err != E_NO_ERROR);
+
+    if (power_mode != PowerMode::POWER_DOWN) handle_interrupt1();
+
     return err;
 }
 
