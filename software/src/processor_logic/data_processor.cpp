@@ -90,7 +90,7 @@ void DataProcessor::handle_register_writes()
     uint8_t addr, written_bit_mask;
     while(register_map->get_base()->get_next_written_and_changed_register(addr, written_bit_mask, reg.byte))
 	{
-        // debug_print("register changed: addr=%02X, written_bit_mask=%02X, new_value=%02X.\n", addr, written_bit_mask, new_value);
+        // debug_print("register changed: addr=%02X, written_bit_mask=%02X, new_value=%02X.\n", addr, written_bit_mask, reg.byte);
         if (addr == BOARD_CONTROL_REGISTER_ADDRESS)
         {
             if (host_can_control_led && (written_bit_mask & BOARD_CONTROL_LED_MASK))
@@ -100,10 +100,7 @@ void DataProcessor::handle_register_writes()
         }
         else if (addr == FUSION_CONTROL_REGISTER_ADDRESS)
         {
-            if (written_bit_mask & FUSION_CONTROL_START_STOP_MASK)
-            {
-                update_fusion_start_stop(reg.fusion_control);
-            }
+            update_fusion_control(reg.fusion_control);
         }
         else if (addr == SENSOR_CONTROL_REGISTER_ADDRESS)
         {
@@ -114,9 +111,30 @@ void DataProcessor::handle_register_writes()
 
 void DataProcessor::handle_register_reads()
 {
-    storage::register_fields::data_ready_t drdy = register_map_helper->get_data_ready_flags();
-
-
+    if(has_new_pressure_data && register_map_helper->is_pressure_data_read_by_host())
+    {
+        register_map_helper->write_pressure_data(pressure);
+    }
+    if(has_new_temperature_data && register_map_helper->is_temperature_data_read_by_host())
+    {
+        register_map_helper->write_temperature_data(temperature);
+    }
+    if(has_new_gyroscope_data && register_map_helper->is_gyroscope_data_read_by_host())
+    {
+        register_map_helper->write_gyroscope_data(gyroscope_fvect);
+    }
+    if(has_new_accelerometer_data && register_map_helper->is_accelerometer_data_read_by_host())
+    {
+        register_map_helper->write_accelerometer_data(accelerometer_fvect);
+    }
+    if(has_new_magnetometer_data && register_map_helper->is_magnetometer_data_read_by_host())
+    {
+        register_map_helper->write_magnetometer_data(magnetometer_fvect);
+    }
+    if(has_new_quaternion_data && register_map_helper->is_quaternion_data_read_by_host())
+    {
+        register_map_helper->write_quaternion_data(quaternion_fqvect);
+    }
 }
 
 void DataProcessor::update_led(storage::register_fields::board_control_t reg)
@@ -145,24 +163,37 @@ void DataProcessor::stop_sensor_fusion()
     board->get_magnetometer_sensor()->set_power_mode(0, sensor::PowerMode::POWER_DOWN);
     board->get_inertial_sensor()->set_power_mode(sensor::Lsm6dsmDevice::LSM6DSM_DEVICE_GYRO, sensor::PowerMode::POWER_DOWN);
     board->get_inertial_sensor()->set_power_mode(sensor::Lsm6dsmDevice::LSM6DSM_DEVICE_ACCEL, sensor::PowerMode::POWER_DOWN);
-    register_map_helper->clear_sensor_errors();
+    
 }
 
-void DataProcessor::update_fusion_start_stop(storage::register_fields::fusion_control_t reg)
+void DataProcessor::reset_fusion()
 {
-    if (reg.start_stop)
+    FusionAhrsReset(&ahrs);
+    register_map_helper->clear_sensor_errors();
+    register_map_helper->clear_data_ready_flags();
+    register_map_helper->set_data_registers_as_read(); // required so we can fill data registers the first time.
+    register_map_helper->set_sensor_fusion_running_status(false);
+}
+
+void DataProcessor::update_fusion_control(storage::register_fields::fusion_control_t reg)
+{
+    if (reg.start)
     {
         // fusion start request received
-        FusionAhrsReset(&ahrs);
+        reset_fusion();
         bool running = start_sensor_fusion();
         register_map_helper->set_sensor_fusion_running_status(running);
-        if (!running) stop_sensor_fusion();
+        if (!running)
+        {
+            stop_sensor_fusion();
+            reset_fusion();
+        }
     }
-    else
+    else if (reg.stop)
     {
         // fusion stop request received
         stop_sensor_fusion();
-        register_map_helper->set_sensor_fusion_running_status(false);
+        reset_fusion();
     }
     register_map_helper->clear_fusion_control_start_stop_bit();
 }

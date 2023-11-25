@@ -266,19 +266,19 @@ int Lsm6dsm::set_power_mode(uint8_t device_index, PowerMode power_mode)
 
 int Lsm6dsm::handle_interrupt()
 {
+    int ret_val = E_NO_ERROR;
     if (interrupt1_active)
     {
-        int ret_val = handle_interrupt1();
+        ret_val |= handle_interrupt1();
         interrupt1_active = false;
-        return ret_val;
     }
 
     if (interrupt2_active)
     {
-        int ret_val = handle_interrupt2();
+        ret_val |= handle_interrupt2();
         interrupt2_active = false;
-        return ret_val;
     }
+    return ret_val;
 }
 
 int Lsm6dsm::handle_interrupt1()

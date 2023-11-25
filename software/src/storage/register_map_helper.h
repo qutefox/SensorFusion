@@ -3,7 +3,9 @@
 #include <stdint.h>
 
 #include "src/storage/register_map_interface.h"
+#include "src/sensor/sensor_types.h"
 #include "src/storage/register_fields.h"
+#include "src/Fusion/Fusion/Fusion.h"
 
 namespace storage
 {
@@ -60,7 +62,14 @@ public:
     void set_quaternion_data_ready_flag(bool value);
     void clear_data_ready_flags();
 
-    
+    void write_pressure_data(const sensor::pressure_t& pressure_data);
+    void write_temperature_data(const sensor::temperature_t& temperature_data);
+    void write_gyroscope_data(const FusionVector& gyroscope_data);
+    void write_accelerometer_data(const FusionVector& accelerometer_data);
+    void write_magnetometer_data(const FusionVector& magnetometer_data);
+    void write_quaternion_data(const FusionQuaternion& quaternion_data);
+
+    void set_data_registers_as_read();
 };
 
 } // namespace storage

@@ -52,9 +52,8 @@ private:
     sensor::SensorInterface* inertial_sensor = nullptr;
     sensor::SensorInterface* magnetometer_sensor = nullptr;
 
-    int i2c_slave_err = E_NO_ERROR;
-
     uint8_t get_i2c_slave_address();
+    void start_i2c_slave();
 
 protected:
     SensorFusionBoard();
@@ -78,6 +77,5 @@ public:
 
     void prepare_for_sleep();
     void handle_sensor_interrupts();
-    int get_i2c_slave_error() const { return i2c_slave_err; }
 };
 

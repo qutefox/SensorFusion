@@ -56,6 +56,11 @@ public:
         return address < length;
     }
 
+    virtual void set_read_flag() override
+    {
+        registers[0]->set_read_flag();
+    }
+
     virtual bool get_read_flag() const override
     {
         return registers[0]->get_read_flag();
@@ -76,6 +81,14 @@ public:
             read_flag &= registers[i]->get_read_flag();
         }
         return read_flag;
+    }
+
+    virtual void set_read() override
+    {
+        for (AddressType i = 0; i < length; ++i)
+        {
+            registers[i]->set_read_flag();
+        }
     }
 
     virtual RegisterType get_written_bit_mask() override

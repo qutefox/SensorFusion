@@ -24,9 +24,9 @@ private:
     storage::RegisterInterface<uint8_t, uint8_t>* fusion_status_register = nullptr; // 2
     storage::RegisterInterface<uint8_t, uint8_t>* sensor_control_register = nullptr; // 3
     storage::RegisterInterface<uint8_t, uint8_t>* sensor_status_register = nullptr; // 4
-    storage::RegisterInterface<uint8_t, uint8_t>* sensor_calibration_control_register = nullptr;
-    storage::RegisterInterface<uint8_t, uint8_t>* sensor_calibration_status_register = nullptr;
-    storage::RegisterInterface<uint8_t, uint8_t>* data_ready_register = nullptr;
+    storage::RegisterInterface<uint8_t, uint8_t>* sensor_calibration_control_register = nullptr; // 5
+    storage::RegisterInterface<uint8_t, uint8_t>* sensor_calibration_status_register = nullptr; // 6
+    storage::RegisterInterface<uint8_t, uint8_t>* data_ready_register = nullptr; // 7
     storage::MultiRegisterInterface<uint8_t, uint8_t>* gyroscope_fusion_registers = nullptr;
     storage::MultiRegisterInterface<uint8_t, uint8_t>* accelerometer_fusion_registers = nullptr;
     storage::MultiRegisterInterface<uint8_t, uint8_t>* magnetometer_fusion_registers = nullptr;

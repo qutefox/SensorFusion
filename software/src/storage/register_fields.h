@@ -27,12 +27,14 @@ typedef struct
     uint8_t     : 7;
 } board_control_t;
 
-#define FUSION_CONTROL_START_STOP_MASK 0x01
+#define FUSION_CONTROL_START_MASK 0x01
+#define FUSION_CONTROL_STOP_MASK  0x02
 
 typedef struct
 {
-    uint8_t start_stop : 1;
-    uint8_t            : 7;
+    uint8_t start : 1;
+    uint8_t stop  : 1;
+    uint8_t       : 6;
 } fusion_control_t;
 
 #define FUSION_STATUS_RUNNING_MASK 0x01
@@ -51,10 +53,10 @@ typedef struct
     uint8_t baro_powermode  : 2; // sensor::PowerMode
 } sensor_control_t;
 
-#define SENSOR_STATUS_GYRO_ERROR_MASK 0x01
+#define SENSOR_STATUS_GYRO_ERROR_MASK  0x01
 #define SENSOR_STATUS_ACCEL_ERROR_MASK 0x02
-#define SENSOR_STATUS_MAG_ERROR_MASK 0x04
-#define SENSOR_STATUS_BARO_ERROR_MASK 0x08
+#define SENSOR_STATUS_MAG_ERROR_MASK   0x04
+#define SENSOR_STATUS_BARO_ERROR_MASK  0x08
 
 #define SENSOR_STATUS_ERROR_MASK 0x0F
 
@@ -68,11 +70,11 @@ typedef struct
 } sensor_status_t;
 
 
-#define DATA_READY_GYRO_MASK 0x01
+#define DATA_READY_GYRO_MASK  0x01
 #define DATA_READY_ACCEL_MASK 0x02
-#define DATA_READY_MAG_MASK 0x04
-#define DATA_READY_BARO_MASK 0x08
-#define DATA_READY_QUAT_MASK 0x10
+#define DATA_READY_MAG_MASK   0x04
+#define DATA_READY_BARO_MASK  0x08
+#define DATA_READY_QUAT_MASK  0x10
 
 typedef struct
 {

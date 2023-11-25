@@ -26,7 +26,7 @@ Registermap::Registermap()
 
     board_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x00, 0x00);
 
-    fusion_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x01, 0x00);
+    fusion_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x03, 0x00);
     fusion_status_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
 
     sensor_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x00, 0x55);

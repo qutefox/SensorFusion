@@ -118,7 +118,7 @@ void RegisterMapHelper::set_sensor_fusion_running_status(bool running)
 
 void RegisterMapHelper::clear_fusion_control_start_stop_bit()
 {
-    register_map->get_fusion_control_register()->clear_bits(FUSION_CONTROL_START_STOP_MASK, false, false);
+    register_map->get_fusion_control_register()->clear_bits(FUSION_CONTROL_START_MASK | FUSION_CONTROL_STOP_MASK, false, false);
 }
 
 bool RegisterMapHelper::is_temperature_data_read_by_host()
@@ -256,4 +256,53 @@ void RegisterMapHelper::set_quaternion_data_ready_flag(bool value)
 void RegisterMapHelper::clear_data_ready_flags()
 {
     register_map->get_data_ready_register()->write(0x00, false, false);
+}
+
+void RegisterMapHelper::write_pressure_data(const sensor::pressure_t& pressure_data)
+{
+    register_map->get_pressure_registers()->write(pressure_data.u8bit, false, false);
+    set_pressure_data_ready_flag(true);
+}
+
+void RegisterMapHelper::write_temperature_data(const sensor::temperature_t& temperature_data)
+{
+    register_map->get_temperature_registers()->write(temperature_data.u8bit, false, false);
+}
+
+void RegisterMapHelper::write_gyroscope_data(const FusionVector& gyroscope_data)
+{   
+    const uint8_t* array_data = reinterpret_cast<const uint8_t*>(gyroscope_data.array);
+    register_map->get_gyroscope_fusion_registers()->write(array_data, false, false);
+    set_gyroscope_data_ready_flag(true);
+}
+
+void RegisterMapHelper::write_accelerometer_data(const FusionVector& accelerometer_data)
+{
+    const uint8_t* array_data = reinterpret_cast<const uint8_t*>(accelerometer_data.array);
+    register_map->get_accelerometer_fusion_registers()->write(array_data, false, false);
+    set_accelerometer_data_ready_flag(true);
+}
+
+void RegisterMapHelper::write_magnetometer_data(const FusionVector& magnetometer_data)
+{
+    const uint8_t* array_data = reinterpret_cast<const uint8_t*>(magnetometer_data.array);
+    register_map->get_magnetometer_fusion_registers()->write(array_data, false, false);
+    set_magnetometer_data_ready_flag(true);
+}
+
+void RegisterMapHelper::write_quaternion_data(const FusionQuaternion& quaternion_data)
+{
+    const uint8_t* array_data = reinterpret_cast<const uint8_t*>(quaternion_data.array);
+    register_map->get_quaternion_fusion_registers()->write(array_data, false, false);
+    set_quaternion_data_ready_flag(true);
+} 
+
+void RegisterMapHelper::set_data_registers_as_read()
+{
+    register_map->get_pressure_registers()->set_read();
+    register_map->get_temperature_registers()->set_read();
+    register_map->get_gyroscope_fusion_registers()->set_read();
+    register_map->get_accelerometer_fusion_registers()->set_read();
+    register_map->get_magnetometer_fusion_registers()->set_read();
+    register_map->get_quaternion_fusion_registers()->set_read();
 }

@@ -55,9 +55,10 @@ private:
     bool can_host_control_led();
     bool start_sensor_fusion();
     void stop_sensor_fusion();
+    void reset_fusion();
 
     void update_led(storage::register_fields::board_control_t board_control_reg);
-    void update_fusion_start_stop(storage::register_fields::fusion_control_t fusion_control_reg);
+    void update_fusion_control(storage::register_fields::fusion_control_t fusion_control_reg);
     void update_sensor_control(storage::register_fields::sensor_control_t sensor_control_reg, uint8_t written_bit_mask);
 
 protected:

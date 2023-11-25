@@ -31,7 +31,6 @@ SensorFusionBoard::SensorFusionBoard()
     , barometer_sensor{ nullptr }
     , inertial_sensor{ nullptr }
     , magnetometer_sensor{ nullptr }
-    , i2c_slave_err{ E_NO_ERROR }
 {
     
 }
@@ -66,15 +65,12 @@ int SensorFusionBoard::begin()
 
     // Initalise LED output pin.
     led_pin = new io::DigitalOutputPin(MXC_GPIO0, LED_PIN_MASK);
-    led_pin->write(true);
+    led_pin->write(false);
 
 #ifndef ENABLE_DEBUG_PRINT
     host_interrupt_pin = new io::DigitalOutputPin(MXC_GPIO0, HOSTINT_PIN_MASK);
     host_interrupt_pin->write(true); // Active low, push pull.
 #endif
-
-    // Initalise i2c slave address input pin (with internal pulldown).
-    i2c_slave_address_select_pin = new io::DigitalInputPin(MXC_GPIO0, AD0_MASK__SWDCLK_MASK, mxc_gpio_pad_t::MXC_GPIO_PAD_PULL_DOWN);
 
     // Initalise sensor interrupt pins.
     barometer_int_pin = new io::DigitalInputPin(MXC_GPIO0, BARO_INT_MASK);
@@ -94,17 +90,7 @@ int SensorFusionBoard::begin()
     magnetometer_sensor = sensor::Lis2mdl::get_instance(LIS2MDL_I2C_ADDR, false, magnetometer_int_pin);
     err |= magnetometer_sensor->begin();
 
-    // Read i2c slave address config.
-    uint8_t i2c_slave_address = get_i2c_slave_address();
-    debug_print("i2c slave address: %d.\n", i2c_slave_address);
-    // Remove pulldown from i2c slave address input pin.
-    i2c_slave_address_select_pin->set_pullup_pulldown(mxc_gpio_pad_t::MXC_GPIO_PAD_NONE);
-    // Initalise i2c slave.
-    i2c_slave = io::I2cSlave::get_instance();
-    i2c_slave_err = i2c_slave->begin(i2c_slave_address);
-    err |= i2c_slave_err;
-
-    led_pin->write(false);
+    start_i2c_slave();
 
     return err;
 }
@@ -117,6 +103,31 @@ uint8_t SensorFusionBoard::get_i2c_slave_address()
         return I2C_SLAVE_ADDR + (ad0_input_pin_value ? 1 : 0);
     }
     return I2C_SLAVE_ADDR;
+}
+
+void SensorFusionBoard::start_i2c_slave()
+{
+    // Initalise i2c slave address input pin (with internal pulldown).
+    i2c_slave_address_select_pin = new io::DigitalInputPin(MXC_GPIO0, AD0_MASK__SWDCLK_MASK,
+        mxc_gpio_pad_t::MXC_GPIO_PAD_PULL_DOWN);
+    // Read i2c slave address config.
+    uint8_t i2c_slave_address = get_i2c_slave_address();
+    // Remove pulldown from i2c slave address input pin.
+    i2c_slave_address_select_pin->set_pullup_pulldown(mxc_gpio_pad_t::MXC_GPIO_PAD_NONE);
+    // Initalise i2c slave.
+    i2c_slave = io::I2cSlave::get_instance();
+    if (i2c_slave->begin(i2c_slave_address) != E_NO_ERROR)
+    {
+        led_pin->write(true);
+        MXC_Delay(MXC_DELAY_MSEC(100));
+        led_pin->write(false);
+        MXC_Delay(MXC_DELAY_MSEC(100));
+        led_pin->write(true);
+        MXC_Delay(MXC_DELAY_MSEC(100));
+        led_pin->write(false);
+        MXC_Delay(MXC_DELAY_MSEC(500));
+        NVIC_SystemReset();
+    }
 }
 
 void SensorFusionBoard::prepare_for_sleep()

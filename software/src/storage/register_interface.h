@@ -18,6 +18,7 @@ public:
     RegisterInterface() { }
     virtual ~RegisterInterface() { }
 
+    virtual void set_read_flag() = 0;
     virtual bool get_read_flag() const = 0;
     virtual RegisterType get_written_bit_mask() = 0;
 
@@ -54,6 +55,7 @@ public:
     virtual bool get_read_flag(bool& read_flag, AddressType offset) = 0;
     virtual bool get_written_bit_mask(RegisterType& written_bit_mask, AddressType offset) = 0;
     virtual bool is_read() const = 0;
+    virtual void set_read() = 0;
 
     virtual bool get_next_written_and_changed_register(AddressType& offset, RegisterType& written_bit_mask, RegisterType& new_value) = 0;
 };

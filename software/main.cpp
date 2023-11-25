@@ -45,14 +45,14 @@ int main()
 
 	while (true)
 	{
-		debug_print("going to sleep.\n");
+		// debug_print("going to sleep.\n");
 		// Changes are made in an interrupt handler where we cannot process them.
 		// So we process them here after waking up for any reason.
 		board->prepare_for_sleep();
 		MXC_LP_EnterSleepMode();
 		// MXC_LP_EnterDeepSleepMode();
 
-		debug_print("waking up.\n");
+		// debug_print("waking up.\n");
 
 		// Handle sensor interrupt(s).
 		board->handle_sensor_interrupts();

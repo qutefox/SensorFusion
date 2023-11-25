@@ -1,6 +1,7 @@
 #pragma once
 
-#include "register.h"
+#include "src/storage/register.h"
+#include "src/debug_print.h"
 
 namespace storage
 {

@@ -19,6 +19,11 @@ public:
     { }
     virtual ~Register() { }
 
+    virtual void set_read_flag() override
+    {
+
+    }
+
     virtual bool get_read_flag() const override
     {
         return false;
