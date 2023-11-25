@@ -8,7 +8,7 @@
 #include "uart.h"
 
 #include "src/sensor_fusion_board.h"
-#include "src/data_processor.h"
+#include "src/processor_logic/data_processor.h"
 
 #include "src/debug_print.h"
 
@@ -27,9 +27,10 @@ int main()
 
 	debug_print("About to initaise board.\n");
 
-	if (board->begin() != E_NO_ERROR)
+	int board_err = board->begin();
+	if (board_err != E_NO_ERROR)
 	{
-		debug_print("Failed to initaise board.\n");
+		debug_print("Failed to initaise board: %d.\n", board_err);
 	}
 	else
 	{
@@ -44,16 +45,17 @@ int main()
 
 	while (true)
 	{
+		debug_print("going to sleep.\n");
 		// Changes are made in an interrupt handler where we cannot process them.
 		// So we process them here after waking up for any reason.
 		board->prepare_for_sleep();
 		MXC_LP_EnterSleepMode();
 		// MXC_LP_EnterDeepSleepMode();
 
+		debug_print("waking up.\n");
+
 		// Handle sensor interrupt(s).
-		board->get_magnetometer_sensor()->handle_possible_interrupt();
-		board->get_inertial_sensor()->handle_possible_interrupt();
-		board->get_barometer_sensor()->handle_possible_interrupt();
+		board->handle_sensor_interrupts();
 
 		// Handle registermap update(s).
 		data_processor->update_register_map();

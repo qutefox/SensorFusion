@@ -11,7 +11,7 @@ public:
     virtual ~RegistermapInterface() { }
 
     virtual void reset() = 0;
-    virtual storage::MultiRegisterInterface<uint8_t, uint8_t>* get_addressable_base() const = 0;
+    virtual storage::MultiRegisterInterface<uint8_t, uint8_t>* get_base() const = 0;
 
     virtual storage::RegisterInterface<uint8_t, uint8_t>* get_board_control_register() const = 0;
     virtual storage::RegisterInterface<uint8_t, uint8_t>* get_fusion_control_register() const = 0;

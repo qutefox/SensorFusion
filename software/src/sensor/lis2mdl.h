@@ -14,29 +14,30 @@ private:
     static Lis2mdl* instance;
     static uint32_t lock;
     
+    io::DigitalInputPinInterface* interrupt_pin = nullptr;
     axis3bit16_t raw_mag;
     temperature_t raw_temperature;
 
     virtual int reset() override;
-    virtual bool is_device_id_valid() override;
+    int is_device_id_matching();
 
 protected:
     Lis2mdl(uint8_t i2c_address, bool i2c_debug=false,
         io::DigitalInputPinInterface* interrupt_pin1=nullptr);
     virtual ~Lis2mdl();
 
-    virtual inline int handle_interrupt1() override;
-
 public:
     Lis2mdl(Lis2mdl& other) = delete;
     void operator=(const Lis2mdl& other) = delete;
 
     static Lis2mdl* get_instance(uint8_t i2c_address, bool i2c_debug=false,
-        io::DigitalInputPinInterface* interrupt_pin1=nullptr);
+        io::DigitalInputPinInterface* interrupt_pin=nullptr);
 
     virtual int begin() override;
     virtual int end() override;
-    virtual int set_power_mode(PowerMode power_mode) override;
+    
+    virtual int set_power_mode(uint8_t device_index, PowerMode power_mode = PowerMode::POWER_DOWN) override;
+    virtual int handle_interrupt() override;
 };
 
 } // namespace sensor

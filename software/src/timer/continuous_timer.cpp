@@ -13,16 +13,16 @@ uint32_t ContinuousTimer::lock = 0;
 
 ContinuousTimer::ContinuousTimer()
 {
-    callbacks[0] = nullptr;
-    callbacks[1] = nullptr;
-    callbacks[2] = nullptr;
+    for (uint8_t i = 0 ; i < 3 ; ++i)
+    {
+        started[i] = false;
+        callbacks[i] = [](void) -> void { };
+    }
 }
 
 ContinuousTimer::~ContinuousTimer()
 {
-    callbacks[0] = nullptr;
-    callbacks[1] = nullptr;
-    callbacks[2] = nullptr;
+
 }
 
 ContinuousTimer* ContinuousTimer::get_instance()
@@ -36,105 +36,72 @@ ContinuousTimer* ContinuousTimer::get_instance()
     return instance;
 }
 
-void ContinuousTimer::run_callback(uint8_t timer_index)
+std::function<void()> ContinuousTimer::get_callback(Timers timer) const
 {
-    if (timer_index > 2) return;
-    if (callbacks[timer_index] == nullptr) return;
-    callbacks[timer_index]();
+    uint8_t timer_index = static_cast<uint8_t>(timer);
+    return callbacks[timer_index];
 }
 
-int ContinuousTimer::set_timer0_interrupt_callback(uint32_t frequency, void (*irq_handler)(void))
+int ContinuousTimer::start_timer(Timers timer,
+    uint32_t frequency, std::function<void()> callback)
 {
-    callbacks[0] = irq_handler;
-
-    if (irq_handler == nullptr)
+    uint8_t timer_index = static_cast<uint8_t>(timer);
+    callbacks[timer_index] = callback;
+    if (timer == Timers::TIMER0)
     {
-        MXC_TMR_Shutdown(MXC_TMR0);
-        MXC_NVIC_SetVector(TMR0_IRQn, nullptr);
-        NVIC_DisableIRQ(TMR0_IRQn);
-        return E_NO_ERROR;
+        MXC_NVIC_SetVector(MXC_TMR_GET_IRQ(timer_index),
+            [](void) -> void
+            {
+                ContinuousTimer::get_instance()->get_callback(Timers::TIMER0)();
+                MXC_TMR_ClearFlags(MXC_TMR_GET_TMR(0));
+            });
+    }
+    else if (timer == Timers::TIMER1)
+    {
+        MXC_NVIC_SetVector(MXC_TMR_GET_IRQ(timer_index),
+            [](void) -> void
+            {
+                ContinuousTimer::get_instance()->get_callback(Timers::TIMER1)();
+                MXC_TMR_ClearFlags(MXC_TMR_GET_TMR(1));
+            });
+    }
+    else if (timer == Timers::TIMER2)
+    {
+        MXC_NVIC_SetVector(MXC_TMR_GET_IRQ(timer_index),
+            [](void) -> void
+            {
+                ContinuousTimer::get_instance()->get_callback(Timers::TIMER2)();
+                MXC_TMR_ClearFlags(MXC_TMR_GET_TMR(2));
+            });
     }
 
-    MXC_NVIC_SetVector(TMR0_IRQn,
-        []() -> void
-        {
-            MXC_TMR_ClearFlags(MXC_TMR0);
-            ContinuousTimer* continuous_timer = ContinuousTimer::get_instance();
-            continuous_timer->run_callback(0);
-        });
-    NVIC_EnableIRQ(TMR0_IRQn);
-    uint32_t periodTicks = MXC_TMR_GetPeriod(MXC_TMR0, 1, frequency);
-    MXC_TMR_Shutdown(MXC_TMR0);
+    NVIC_EnableIRQ(MXC_TMR_GET_IRQ(timer_index));
+    uint32_t periodTicks = MXC_TMR_GetPeriod(MXC_TMR_GET_TMR(timer_index), 1, frequency);
+    MXC_TMR_Shutdown(MXC_TMR_GET_TMR(timer_index));
     mxc_tmr_cfg_t tmr;
     tmr.pres = TMR_PRES_1;
     tmr.mode = TMR_MODE_CONTINUOUS;
     tmr.cmp_cnt = periodTicks;
     tmr.pol = 0;
-    int err = MXC_TMR_Init(MXC_TMR0, &tmr);
-    MXC_TMR_Start(MXC_TMR0);
+    int err = MXC_TMR_Init(MXC_TMR_GET_TMR(timer_index), &tmr);
+    MXC_TMR_Start(MXC_TMR_GET_TMR(timer_index));
+    if (err == E_NO_ERROR) started[timer_index] = true;
     return err;
 }
 
-int ContinuousTimer::set_timer1_interrupt_callback(uint32_t frequency, void (*irq_handler)(void))
+int ContinuousTimer::stop_timer(Timers timer)
 {
-    callbacks[1] = irq_handler;
-
-    if (irq_handler == nullptr)
-    {
-        MXC_TMR_Shutdown(MXC_TMR1);
-        MXC_NVIC_SetVector(TMR1_IRQn, nullptr);
-        NVIC_DisableIRQ(TMR1_IRQn);
-        return E_NO_ERROR;
-    }
-
-    MXC_NVIC_SetVector(TMR1_IRQn,
-        []() -> void
-        {
-            MXC_TMR_ClearFlags(MXC_TMR1);
-            ContinuousTimer* continuous_timer = ContinuousTimer::get_instance();
-            continuous_timer->run_callback(1);
-        });
-    NVIC_EnableIRQ(TMR1_IRQn);
-    uint32_t periodTicks = MXC_TMR_GetPeriod(MXC_TMR1, 1, frequency);
-    MXC_TMR_Shutdown(MXC_TMR1);
-    mxc_tmr_cfg_t tmr;
-    tmr.pres = TMR_PRES_1;
-    tmr.mode = TMR_MODE_CONTINUOUS;
-    tmr.cmp_cnt = periodTicks;
-    tmr.pol = 0;
-    int err = MXC_TMR_Init(MXC_TMR1, &tmr);
-    MXC_TMR_Start(MXC_TMR1);
-    return err;
+    uint8_t timer_index = static_cast<uint8_t>(timer);
+    MXC_TMR_Shutdown(MXC_TMR_GET_TMR(timer_index));
+    MXC_NVIC_SetVector(MXC_TMR_GET_IRQ(timer_index), nullptr);
+    NVIC_DisableIRQ(MXC_TMR_GET_IRQ(timer_index));
+    callbacks[timer_index] = [](void) -> void { };
+    started[timer_index] = false;
+    return E_NO_ERROR;
 }
 
-int ContinuousTimer::set_timer2_interrupt_callback(uint32_t frequency, void (*irq_handler)(void))
+bool ContinuousTimer::is_started(Timers timer) const
 {
-    callbacks[2] = irq_handler;
-
-    if (irq_handler == nullptr)
-    {
-        MXC_TMR_Shutdown(MXC_TMR2);
-        MXC_NVIC_SetVector(TMR2_IRQn, nullptr);
-        NVIC_DisableIRQ(TMR2_IRQn);
-        return E_NO_ERROR;
-    }
-
-    MXC_NVIC_SetVector(TMR2_IRQn,
-        []() -> void
-        {
-            MXC_TMR_ClearFlags(MXC_TMR2);
-            ContinuousTimer* continuous_timer = ContinuousTimer::get_instance();
-            continuous_timer->run_callback(2);
-        });
-    NVIC_EnableIRQ(TMR2_IRQn);
-    uint32_t periodTicks = MXC_TMR_GetPeriod(MXC_TMR2, 1, frequency);
-    MXC_TMR_Shutdown(MXC_TMR2);
-    mxc_tmr_cfg_t tmr;
-    tmr.pres = TMR_PRES_1;
-    tmr.mode = TMR_MODE_CONTINUOUS;
-    tmr.cmp_cnt = periodTicks;
-    tmr.pol = 0;
-    int err = MXC_TMR_Init(MXC_TMR2, &tmr);
-    MXC_TMR_Start(MXC_TMR2);
-    return err;
+    uint8_t timer_index = static_cast<uint8_t>(timer);
+    return started[timer_index];
 }

@@ -1,6 +1,15 @@
 #pragma once
 
-#include "src/register_map_interface.h"
+#include "src/storage/register_map_interface.h"
+
+#define BOARD_CONTROL_REGISTER_ADDRESS  0
+#define FUSION_CONTROL_REGISTER_ADDRESS 1
+#define FUSION_STATUS_REGISTER_ADDRESS  2
+#define SENSOR_CONTROL_REGISTER_ADDRESS 3
+#define SENSOR_STATUS_REGISTER_ADDRESS  4
+
+namespace storage
+{
 
 class Registermap : public RegistermapInterface
 {
@@ -10,11 +19,11 @@ private:
 
     storage::MultiRegisterInterface<uint8_t, uint8_t>* registers = nullptr;
 
-    storage::RegisterInterface<uint8_t, uint8_t>* board_control_register = nullptr;
-    storage::RegisterInterface<uint8_t, uint8_t>* fusion_control_register = nullptr;
-    storage::RegisterInterface<uint8_t, uint8_t>* fusion_status_register = nullptr;
-    storage::RegisterInterface<uint8_t, uint8_t>* sensor_control_register = nullptr;
-    storage::RegisterInterface<uint8_t, uint8_t>* sensor_status_register = nullptr;
+    storage::RegisterInterface<uint8_t, uint8_t>* board_control_register = nullptr; // 0
+    storage::RegisterInterface<uint8_t, uint8_t>* fusion_control_register = nullptr; // 1
+    storage::RegisterInterface<uint8_t, uint8_t>* fusion_status_register = nullptr; // 2
+    storage::RegisterInterface<uint8_t, uint8_t>* sensor_control_register = nullptr; // 3
+    storage::RegisterInterface<uint8_t, uint8_t>* sensor_status_register = nullptr; // 4
     storage::RegisterInterface<uint8_t, uint8_t>* sensor_calibration_control_register = nullptr;
     storage::RegisterInterface<uint8_t, uint8_t>* sensor_calibration_status_register = nullptr;
     storage::RegisterInterface<uint8_t, uint8_t>* data_ready_register = nullptr;
@@ -37,7 +46,7 @@ public:
 
 public:
     virtual void reset() override;
-    virtual storage::MultiRegisterInterface<uint8_t, uint8_t>* get_addressable_base() const override;
+    virtual storage::MultiRegisterInterface<uint8_t, uint8_t>* get_base() const override;
     
     virtual storage::RegisterInterface<uint8_t, uint8_t>* get_board_control_register() const override;
     virtual storage::RegisterInterface<uint8_t, uint8_t>* get_fusion_control_register() const override;
@@ -54,3 +63,5 @@ public:
     virtual storage::MultiRegisterInterface<uint8_t, uint8_t>* get_pressure_registers() const override;
     virtual storage::MultiRegisterInterface<uint8_t, uint8_t>* get_temperature_registers() const override;
 };
+
+} // namespace storage

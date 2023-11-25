@@ -13,10 +13,13 @@ using namespace sensor;
 Lps22hb* Lps22hb::instance = nullptr;
 uint32_t Lps22hb::lock = 0;
 
-Lps22hb::Lps22hb(uint8_t i2c_address, bool i2c_debug, io::DigitalInputPinInterface* interrupt_pin)
-    : SensorBase(i2c_address, i2c_debug, interrupt_pin)
+Lps22hb::Lps22hb(uint8_t i2c_address, bool i2c_debug, io::DigitalInputPinInterface* _interrupt_pin)
+    : SensorBase(i2c_address, i2c_debug)
+    , interrupt_pin{ _interrupt_pin }
     , pressure_data_ready{ 0 }
     , temperature_data_ready{ 0 }
+    , raw_pressure{ 0 }
+    , raw_temperature{ 0 }
 {
     
 }
@@ -39,35 +42,39 @@ Lps22hb* Lps22hb::get_instance(uint8_t i2c_address, bool i2c_debug, io::DigitalI
 
 int Lps22hb::reset()
 {
-    int err = lps22hb_reset_set(dev_ctx, PROPERTY_ENABLE);
-    if (err != E_NO_ERROR) return err;
+    err |= lps22hb_reset_set(dev_ctx, PROPERTY_ENABLE);
+    if (has_error()) return err;
 
     uint8_t rst = 1;
     do
     {
-        err = lps22hb_reset_get(dev_ctx, &rst);
-        if (err != E_NO_ERROR) return err;
+        err |= lps22hb_reset_get(dev_ctx, &rst);
+        if (has_error()) return err;
     }
     while(rst);
     return err;
 }
 
-bool Lps22hb::is_device_id_valid()
+int Lps22hb::is_device_id_matching()
 {
     uint8_t whoami = 0;
-    int err = lps22hb_device_id_get(dev_ctx, &whoami);
-    if (err != E_NO_ERROR || whoami != LPS22HB_ID) return false;
-    return true;
+    err |= lps22hb_device_id_get(dev_ctx, &whoami);
+    if (has_error()) return err;
+    if (whoami != LPS22HB_ID) return E_NO_DEVICE;
+    return E_NO_ERROR;
 }
 
 int Lps22hb::begin()
 {
-    int err = E_NO_ERROR;
+    err = E_NO_ERROR;
     err |= reset();
-    if(!is_device_id_valid())
+
+    err |= is_device_id_matching();
+    if(has_error())
     {
+        // No reason to go forward. We can give up here and now.
         data_processor->set_barometer_sensor_error(true);
-        return E_NO_DEVICE;
+        return err;
     }
 
     // Enable block data update.
@@ -83,32 +90,37 @@ int Lps22hb::begin()
     // Set low pass filter.
     err |= lps22hb_low_pass_filter_mode_set(dev_ctx, LPS22HB_LPF_ODR_DIV_2);
     // Set power mode.
-    err |= set_power_mode(PowerMode::POWER_DOWN);
+    err |= set_power_mode(0, PowerMode::POWER_DOWN);
     // Configure interrupt handler.
-    err |= attach_interrupt1_handler(true);
+    if (interrupt_pin != nullptr)
+    {
+        err |= interrupt_pin->attach_interrupt_callback(
+            [](void* this_obj) -> void
+            {
+                static_cast<Lps22hb*>(this_obj)->set_interrupt_active();
+            }, this); // Passing the this pointer as the callback data.
+    }
 
-    data_processor->set_barometer_sensor_error(err != E_NO_ERROR);
+    data_processor->set_barometer_sensor_error(has_error());
     return err;
 }
 
 int Lps22hb::end()
 {
-    int err = E_NO_ERROR;
+    err = E_NO_ERROR;
     err |= reset();
-    err |= attach_interrupt1_handler(false);
-    if(!is_device_id_valid())
+    if (interrupt_pin != nullptr)
     {
-        data_processor->set_barometer_sensor_error(true);
-        return E_NO_DEVICE;
+        interrupt_pin->detach_interrupt_callback();
     }
-    err |= set_power_mode(PowerMode::POWER_DOWN);
-    data_processor->set_barometer_sensor_error(err != E_NO_ERROR);
+    data_processor->set_barometer_sensor_error(has_error());
     return err;
 }
 
-int Lps22hb::set_power_mode(PowerMode power_mode)
+int Lps22hb::set_power_mode(uint8_t device_index, PowerMode power_mode)
 {
-    int err = E_NO_ERROR;
+    if (device_index != 0) return E_NO_DEVICE;
+
     switch (power_mode)
     {
     default:
@@ -130,17 +142,19 @@ int Lps22hb::set_power_mode(PowerMode power_mode)
         break;
     }
 
-    data_processor->set_barometer_sensor_error(err != E_NO_ERROR);
+    data_processor->set_barometer_sensor_error(has_error());
 
-    if (power_mode != PowerMode::POWER_DOWN) handle_interrupt1();
+    if (power_mode != PowerMode::POWER_DOWN)
+    {
+        // Handle any available data so we can get the next interrupt.
+        handle_interrupt();
+    }
 
     return err;
 }
 
-int Lps22hb::handle_interrupt1()
+int Lps22hb::handle_interrupt()
 {
-    int err = E_NO_ERROR;
-     
     err |= lps22hb_data_ready_get(dev_ctx, &pressure_data_ready, &temperature_data_ready);
 
     if (pressure_data_ready)
@@ -155,6 +169,7 @@ int Lps22hb::handle_interrupt1()
         data_processor->update_temperature(raw_temperature);
     }
 
-    data_processor->set_barometer_sensor_error(err != E_NO_ERROR);
+    interrupt_active = false;
+    data_processor->set_barometer_sensor_error(has_error());
     return err;
 }

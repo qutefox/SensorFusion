@@ -2,16 +2,18 @@
 
 #include <stdint.h>
 #include "tmr.h"
+#include "timer_interface.h"
 
 namespace timer
 {
 
-class OneshotTimer
+class OneshotTimer : public TimerInterface
 {
     static OneshotTimer* instance;
     static uint32_t lock;
 
-    void (*callbacks[MXC_IRQ_COUNT])(void);
+    bool started[3];
+    std::function<void()> callbacks[3];
 
 protected:
     OneshotTimer();
@@ -23,11 +25,12 @@ public:
 
     static OneshotTimer* get_instance();
 
-    int set_timer0_interrupt_callback(uint32_t frequency, void (*irq_handler)(void));
-    int set_timer1_interrupt_callback(uint32_t frequency, void (*irq_handler)(void));
-    int set_timer2_interrupt_callback(uint32_t frequency, void (*irq_handler)(void));
+    virtual int start_timer(Timers timer, uint32_t frequency, std::function<void()> callback) override;
+    virtual int stop_timer(Timers timer) override;
+    virtual bool is_started(Timers timer) const override;
 
-    void run_callback(uint8_t timer_index);
+    std::function<void()> get_callback(Timers timer) const;
+    void timer_finished(Timers timer);
 };
 
 } // namespace timer

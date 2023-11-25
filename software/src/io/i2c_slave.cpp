@@ -5,7 +5,7 @@
 #include "nvic_table.h"
 
 #include "src/sensor_fusion_board.h"
-#include "src/register_map.h"
+#include "src/storage/register_map.h"
 #include "src/debug_print.h"
 
 using namespace io;
@@ -15,7 +15,7 @@ uint32_t I2cSlave::lock = 0;
 
 I2cSlave::I2cSlave()
 	: transaction_done{ false }
-	, register_map{ Registermap::get_instance()->get_addressable_base() }
+	, register_map{ storage::Registermap::get_instance()->get_base() }
 {
 
 }
@@ -44,8 +44,8 @@ int I2cSlave::begin(uint8_t slave_address)
 
 	// Initialise I2C slave
 	err |= MXC_I2C_Init(MXC_I2C_GET_I2C(I2C_SLAVE), 0, slave_address);
-	err = MXC_I2C_SetFrequency(MXC_I2C_GET_I2C(I2C_SLAVE), I2C_SLAVE_SPEED);
-	if (err < 0) err |= E_FAIL;
+	int freq = MXC_I2C_SetFrequency(MXC_I2C_GET_I2C(I2C_SLAVE), I2C_SLAVE_SPEED);
+	if (freq < 0) err |= E_FAIL;
 	err |= MXC_I2C_SetClockStretching(MXC_I2C_GET_I2C(I2C_SLAVE), 1);
 
 	// Enable I2C interrupt

@@ -4,6 +4,7 @@
 
 #include "src/sensor/sensor_types.h"
 #include "src/sensor/sensor_base.h"
+#include "src/io/digital_input_pin_interface.h"
 
 // Forward declare types.
 struct _lps22hb_fifo_output_data_t;
@@ -18,20 +19,19 @@ private:
     static Lps22hb* instance;
     static uint32_t lock;
 
+    io::DigitalInputPinInterface* interrupt_pin = nullptr;
     uint8_t pressure_data_ready = 0;
     uint8_t temperature_data_ready = 0;
-    pressure_t raw_pressure;
-    temperature_t raw_temperature;
+    pressure_t raw_pressure = {0};
+    temperature_t raw_temperature = {0};
 
     virtual int reset() override;
-    virtual bool is_device_id_valid() override;
+    int is_device_id_matching();
 
 protected:
     Lps22hb(uint8_t i2c_address, bool i2c_debug=false,
         io::DigitalInputPinInterface* interrupt_pin=nullptr);
     virtual ~Lps22hb();
-
-    virtual inline int handle_interrupt1() override;
 
 public:
     Lps22hb(Lps22hb& other) = delete;
@@ -42,7 +42,9 @@ public:
 
     virtual int begin() override;
     virtual int end() override;
-    virtual int set_power_mode(PowerMode power_mode) override;
+    
+    virtual int set_power_mode(uint8_t device_index, PowerMode power_mode = PowerMode::POWER_DOWN) override;
+    virtual int handle_interrupt() override;
 };
 
 

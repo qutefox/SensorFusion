@@ -26,6 +26,9 @@ public:
 
     virtual void write(RegisterType value, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
     virtual bool write(const RegisterType* buffer, AddressType length, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
+
+    virtual void set_bits(RegisterType value, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
+    virtual void clear_bits(RegisterType value, bool use_write_mask=true, bool mark_changed_bits=true) = 0;
 };
 
 template<typename RegisterType, typename AddressType>

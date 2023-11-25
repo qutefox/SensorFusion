@@ -3,7 +3,7 @@
 #include "mxc_errors.h"
 #include "mxc_lock.h"
 
-#include "src/data_processor.h"
+#include "src/processor_logic/data_processor.h"
 #include "src/sensor/lsm6dsm-pid/lsm6dsm_reg.h"
 #include "src/debug_print.h"
 
@@ -13,8 +13,14 @@ Lsm6dsm* Lsm6dsm::instance = nullptr;
 uint32_t Lsm6dsm::lock = 0;
 
 Lsm6dsm::Lsm6dsm(uint8_t i2c_address, bool i2c_debug,
-    io::DigitalInputPinInterface* interrupt_pin1, io::DigitalInputPinInterface* interrupt_pin2)
-    : SensorBase(i2c_address, i2c_debug, interrupt_pin1, interrupt_pin2)
+    io::DigitalInputPinInterface* _interrupt1_pin, io::DigitalInputPinInterface* _interrupt2_pin)
+    : SensorBase(i2c_address, i2c_debug)
+    , interrupt1_active{ false }
+    , interrupt2_active{ false }
+    , err1{ E_NO_ERROR }
+    , err2{ E_NO_ERROR }
+    , interrupt1_pin{ _interrupt1_pin }
+    , interrupt2_pin{ _interrupt2_pin }
     , gyroscope_data_ready{ 0 }
     , accelerometer_data_ready{ 0 }
 {
@@ -27,52 +33,76 @@ Lsm6dsm::~Lsm6dsm()
 }
 
 Lsm6dsm* Lsm6dsm::get_instance(uint8_t i2c_address, bool i2c_debug,
-    io::DigitalInputPinInterface* interrupt_pin1, io::DigitalInputPinInterface* interrupt_pin2)
+    io::DigitalInputPinInterface* interrupt1_pin, io::DigitalInputPinInterface* interrupt2_pin)
 {
     MXC_GetLock(&lock, 1);
     if (instance == nullptr)
     {
-        instance = new Lsm6dsm(i2c_address, i2c_debug, interrupt_pin1, interrupt_pin2);
+        instance = new Lsm6dsm(i2c_address, i2c_debug, interrupt1_pin, interrupt2_pin);
     }
     MXC_FreeLock(&lock);
     return instance;
 }
 
+void Lsm6dsm::set_interrupt1_active()
+{
+    interrupt1_active = true;
+}
+
+void Lsm6dsm::set_interrupt2_active()
+{
+    interrupt2_active = true;
+}
+
+bool Lsm6dsm::has_interrupt()
+{
+    return interrupt_active || interrupt1_active || interrupt2_active;
+}
+
+bool Lsm6dsm::has_error()
+{
+    return (err != E_NO_ERROR) || (err1 != E_NO_ERROR) || (err2 != E_NO_ERROR);
+}
+
+
 int Lsm6dsm::reset()
 {
-    int err = lsm6dsm_reset_set(dev_ctx, PROPERTY_ENABLE);
-    if (err != E_NO_ERROR) return err;
+    err |= lsm6dsm_reset_set(dev_ctx, PROPERTY_ENABLE);
+    if (has_error()) return err;
 
     uint8_t rst = 1;
     do
     {
-        err = lsm6dsm_reset_get(dev_ctx, &rst);
-        if (err != E_NO_ERROR) return err;
+        err |= lsm6dsm_reset_get(dev_ctx, &rst);
+        if (has_error()) return err;
     }
     while(rst);
     return err;
 }
 
-bool Lsm6dsm::is_device_id_valid()
+int Lsm6dsm::is_device_id_matching()
 {
     uint8_t whoami = 0;
-    int err = lsm6dsm_device_id_get(dev_ctx, &whoami);
-    if (err != E_NO_ERROR || whoami != LSM6DSM_ID) return false;
-    return true;
+    err |= lsm6dsm_device_id_get(dev_ctx, &whoami);
+    if (has_error()) return err;
+    if (whoami != LSM6DSM_ID) return E_NO_DEVICE;
+    return E_NO_ERROR;
 }
 
 int Lsm6dsm::begin()
 {
-    int err = E_NO_ERROR;
-    int err1 = E_NO_ERROR;
-    int err2 = E_NO_ERROR;
-
+    err = E_NO_ERROR;
+    err1 = E_NO_ERROR;
+    err2 = E_NO_ERROR;
     err |= reset();
-    if(!is_device_id_valid())
+    
+    err |= is_device_id_matching();
+    if(has_error())
     {
+        // No reason to go forward. We can give up here and now.
         data_processor->set_gyroscope_sensor_error(true);
         data_processor->set_accelerometer_sensor_error(true);
-        return E_NO_DEVICE;
+        return err;
     }
 
     // Set High Resolution Timestamp (25 us tick).
@@ -104,122 +134,167 @@ int Lsm6dsm::begin()
     // Enable temperature interrupt generation on INT2 pin.
     lsm6dsm_int2_route_t int2_reg;
     err |= lsm6dsm_pin_int2_route_get(dev_ctx, &int2_reg);
+    // We could do some other fancy interrupts here. Maybe in the future..
     int2_reg.int2_drdy_temp = PROPERTY_ENABLE;
     err |= lsm6dsm_pin_int2_route_set(dev_ctx, int2_reg);
     // Set power mode.
-    err |= set_power_mode(PowerMode::POWER_DOWN);
+    err1 |= set_power_mode(Lsm6dsmDevice::LSM6DSM_DEVICE_GYRO, PowerMode::POWER_DOWN);
+    err2 |= set_power_mode(Lsm6dsmDevice::LSM6DSM_DEVICE_ACCEL, PowerMode::POWER_DOWN);
     // Configure interrupt handler(s).
-    err |= attach_interrupt1_handler(true);
-    err |= attach_interrupt2_handler(true);
+    if (interrupt1_pin != nullptr)
+    {
+        err |= interrupt1_pin->attach_interrupt_callback(
+            [](void* this_obj) -> void
+            {
+                static_cast<Lsm6dsm*>(this_obj)->set_interrupt1_active();
+            }, this); // Passing the this pointer as the callback data.
+    }
 
-    if (err != E_NO_ERROR)
+    if (interrupt2_pin != nullptr)
     {
-        data_processor->set_gyroscope_sensor_error(true);
-        data_processor->set_accelerometer_sensor_error(true);
+        err |= interrupt2_pin->attach_interrupt_callback(
+            [](void* this_obj) -> void
+            {
+                static_cast<Lsm6dsm*>(this_obj)->set_interrupt2_active();
+            }, this); // Passing the this pointer as the callback data.
     }
-    else
-    {
-        data_processor->set_gyroscope_sensor_error(err1 != E_NO_ERROR);
-        data_processor->set_accelerometer_sensor_error(err2 != E_NO_ERROR);
-    }
-    return err || err1 || err2;
+
+    bool in_error_state = has_error();
+    data_processor->set_gyroscope_sensor_error(in_error_state);
+    data_processor->set_accelerometer_sensor_error(in_error_state);
+    if (in_error_state) return E_FAIL;
+    return E_NO_ERROR;
 }
 
 int Lsm6dsm::end()
 {
-    int err = E_NO_ERROR;
-
+    err = E_NO_ERROR;
+    err1 = E_NO_ERROR;
+    err2 = E_NO_ERROR;
     err |= reset();
-    err |= attach_interrupt1_handler(false);
-    err |= attach_interrupt2_handler(false);
-    if(!is_device_id_valid())
+    
+    if (interrupt1_pin != nullptr)
     {
-        data_processor->set_gyroscope_sensor_error(true);
-        data_processor->set_accelerometer_sensor_error(true);
-        return E_NO_DEVICE;
+        interrupt1_pin->detach_interrupt_callback();
     }
-    err |= set_power_mode(PowerMode::POWER_DOWN);
-    data_processor->set_gyroscope_sensor_error(err != E_NO_ERROR);
-    data_processor->set_accelerometer_sensor_error(err != E_NO_ERROR);
-    return err;
+
+    if (interrupt2_pin != nullptr)
+    {
+        interrupt2_pin->detach_interrupt_callback();
+    }
+
+    bool in_error_state = has_error();
+    data_processor->set_gyroscope_sensor_error(in_error_state);
+    data_processor->set_accelerometer_sensor_error(in_error_state);
+    if (in_error_state) return E_FAIL;
+    return E_NO_ERROR;
 }
 
-int Lsm6dsm::set_power_mode(PowerMode power_mode)
+int Lsm6dsm::set_power_mode(uint8_t device_index, PowerMode power_mode)
 {
-    int err = E_NO_ERROR;
-    int err1 = E_NO_ERROR;
-    int err2 = E_NO_ERROR;
-
-    if (power_mode == PowerMode::HIGH_PERFORMANCE)
-    {
-        err1 |= lsm6dsm_gy_power_mode_set(dev_ctx, LSM6DSM_GY_HIGH_PERFORMANCE);
-        err2 |= lsm6dsm_xl_power_mode_set(dev_ctx, LSM6DSM_XL_HIGH_PERFORMANCE);
-    }
-    else
-    {
-        err1 |= lsm6dsm_gy_power_mode_set(dev_ctx, LSM6DSM_GY_NORMAL);
-        err2 |= lsm6dsm_xl_power_mode_set(dev_ctx, LSM6DSM_XL_NORMAL);
-    }
-
     switch (power_mode)
     {
     default:
     case PowerMode::POWER_DOWN:
-        err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_OFF);
-        err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_OFF);
+        if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_GYRO)
+        {
+            err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_OFF);
+            err1 |= lsm6dsm_gy_power_mode_set(dev_ctx, LSM6DSM_GY_NORMAL);
+        }
+        else if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_ACCEL)
+        {
+            err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_OFF);
+            err2 |= lsm6dsm_xl_power_mode_set(dev_ctx, LSM6DSM_XL_NORMAL);
+        }
         break;
     case PowerMode::LOW_POWER:
         // Low power for odrs: 12.5Hz, 26Hz and 52Hz.
-        err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_52Hz);
-        err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_26Hz);
+        if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_GYRO)
+        {
+            err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_52Hz);
+            err1 |= lsm6dsm_gy_power_mode_set(dev_ctx, LSM6DSM_GY_NORMAL);
+        }
+        else if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_ACCEL)
+        {
+            err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_52Hz);
+            err2 |= lsm6dsm_xl_power_mode_set(dev_ctx, LSM6DSM_XL_NORMAL);
+        }
         break;
     case PowerMode::NORMAL:
         // Normal for odrs: 104Hz and 208Hz.
-        err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_208Hz);
-        err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_104Hz);
+        if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_GYRO)
+        {
+            err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_208Hz);
+            err1 |= lsm6dsm_gy_power_mode_set(dev_ctx, LSM6DSM_GY_NORMAL);
+        }
+        else if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_ACCEL)
+        {
+            err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_208Hz);
+            err2 |= lsm6dsm_xl_power_mode_set(dev_ctx, LSM6DSM_XL_NORMAL);
+        }
         break;
     case PowerMode::HIGH_PERFORMANCE:
         // High performance for odrs: 416Hz, 833Hz, 1.66KHz, 3.33KHz and 6.66KHz.
-        err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_833Hz);
-        err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_416Hz);
+        if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_GYRO)
+        {
+            err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_833Hz);
+            err1 |= lsm6dsm_gy_power_mode_set(dev_ctx, LSM6DSM_GY_HIGH_PERFORMANCE);
+        }
+        else if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_ACCEL)
+        {
+            err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_833Hz);
+            err2 |= lsm6dsm_xl_power_mode_set(dev_ctx, LSM6DSM_XL_HIGH_PERFORMANCE);
+        }
         break;
     }
 
-    if (err != E_NO_ERROR)
+    if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_GYRO)
     {
-        data_processor->set_gyroscope_sensor_error(true);
-        data_processor->set_accelerometer_sensor_error(true);
+        bool gyroscope_err = (err != E_NO_ERROR) || (err1 != E_NO_ERROR);
+        data_processor->set_gyroscope_sensor_error(gyroscope_err);
+        return gyroscope_err;
     }
-    else
+    else if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_ACCEL)
     {
-        data_processor->set_gyroscope_sensor_error(err1 != E_NO_ERROR);
-        data_processor->set_accelerometer_sensor_error(err2 != E_NO_ERROR);
+        bool accelerometer_err = (err != E_NO_ERROR) || (err2 != E_NO_ERROR);
+        data_processor->set_accelerometer_sensor_error(accelerometer_err);
+        return accelerometer_err;
+    }
 
-        if (power_mode != PowerMode::POWER_DOWN)
-        {
-            handle_interrupt1();
-            handle_interrupt2();
-        }
+    return E_NO_DEVICE;
+}
+
+int Lsm6dsm::handle_interrupt()
+{
+    if (interrupt1_active)
+    {
+        int ret_val = handle_interrupt1();
+        interrupt1_active = false;
+        return ret_val;
     }
-    
-    return err || err1 || err2;
+
+    if (interrupt2_active)
+    {
+        int ret_val = handle_interrupt2();
+        interrupt2_active = false;
+        return ret_val;
+    }
 }
 
 int Lsm6dsm::handle_interrupt1()
 {
-    // if (sdebug) debug_print("Lsm6dsm::handle_interrupt1().\n");
-    int err = lsm6dsm_data_ready_get(dev_ctx, &gyroscope_data_ready, &accelerometer_data_ready);
-    if (err != E_NO_ERROR)
-    {
-        data_processor->set_gyroscope_sensor_error(true);
-        data_processor->set_accelerometer_sensor_error(true);
-        return err;
-    }
     if (lsm6dsm_timestamp_raw_get(dev_ctx, &raw_timestamp.u32bit) == E_NO_ERROR)
     {
         data_processor->update_timestamp(raw_timestamp);
     }
+
+    gyroscope_data_ready = false;
+    accelerometer_data_ready = false;
+    err |= lsm6dsm_data_ready_get(dev_ctx, &gyroscope_data_ready, &accelerometer_data_ready);
+
     int accelerometer_err = E_NO_ERROR;
+    int gyroscope_err = E_NO_ERROR;
+
     if (accelerometer_data_ready)
     {
         accelerometer_err = lsm6dsm_acceleration_raw_get(dev_ctx, raw_accelerometer.i16bit);
@@ -235,7 +310,7 @@ int Lsm6dsm::handle_interrupt1()
         }
         data_processor->set_accelerometer_sensor_error(accelerometer_err != E_NO_ERROR);
     }
-    int gyroscope_err = E_NO_ERROR;
+
     if (gyroscope_data_ready)
     {
         gyroscope_err = lsm6dsm_angular_rate_raw_get(dev_ctx, raw_gyroscope.i16bit);
@@ -251,16 +326,16 @@ int Lsm6dsm::handle_interrupt1()
         }
         data_processor->set_gyroscope_sensor_error(gyroscope_err != E_NO_ERROR);
     }
+
     return gyroscope_err || accelerometer_err;
 }
 
 int Lsm6dsm::handle_interrupt2()
 {
-    // if (sdebug) debug_print("Lsm6dsm::handle_interrupt2().\n");
-    int err = lsm6dsm_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
-    if (err == E_NO_ERROR)
+    int temp_err = lsm6dsm_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
+    if (temp_err == E_NO_ERROR)
     {
         data_processor->update_temperature(raw_temperature);
     }
-    return err;
+    return temp_err;
 }

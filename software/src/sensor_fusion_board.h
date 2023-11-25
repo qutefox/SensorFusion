@@ -1,5 +1,8 @@
 #pragma once
 
+#include "mxc_errors.h"
+
+#include "src/storage/flash_data.h"
 #include "src/io/digital_input_pin_interface.h"
 #include "src/io/digital_output_pin_interface.h"
 #include "src/io/i2c_slave_interface.h"
@@ -36,6 +39,7 @@ private:
     static SensorFusionBoard* instance;
     static uint32_t lock;
 
+    storage::FlashData* flash_data = nullptr;
     io::DigitalOutputPinInterface* led_pin = nullptr;
     io::DigitalOutputPinInterface* host_interrupt_pin = nullptr;
     io::DigitalInputPinInterface* i2c_slave_address_select_pin = nullptr;
@@ -47,6 +51,10 @@ private:
     sensor::SensorInterface* barometer_sensor = nullptr;
     sensor::SensorInterface* inertial_sensor = nullptr;
     sensor::SensorInterface* magnetometer_sensor = nullptr;
+
+    int i2c_slave_err = E_NO_ERROR;
+
+    uint8_t get_i2c_slave_address();
 
 protected:
     SensorFusionBoard();
@@ -60,6 +68,7 @@ public:
 
     int begin();
 
+    storage::FlashData* get_flash_data() const { return flash_data; }
     io::DigitalOutputPinInterface* get_led_pin() const { return led_pin; }
     io::DigitalOutputPinInterface* get_host_interrupt_pin() const { return host_interrupt_pin; }
     io::I2cSlaveInterface* get_i2c_slave() const { return i2c_slave; }
@@ -68,5 +77,7 @@ public:
     sensor::SensorInterface* get_magnetometer_sensor() const { return magnetometer_sensor; }
 
     void prepare_for_sleep();
+    void handle_sensor_interrupts();
+    int get_i2c_slave_error() const { return i2c_slave_err; }
 };
 

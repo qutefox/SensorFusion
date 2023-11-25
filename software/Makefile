@@ -170,6 +170,7 @@ VPATH += src
 VPATH += src/io # Added by Qute
 VPATH += src/timer # Added by Qute
 VPATH += src/storage # Added by Qute
+VPATH += src/processor_logic # Added by Qute
 VPATH += src/sensor # Added by Qute
 VPATH += src/sensor/lps22hb-pid # Added by Qute
 VPATH += src/sensor/lsm6dsm-pid # Added by Qute

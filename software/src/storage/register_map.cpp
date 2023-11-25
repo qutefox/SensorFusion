@@ -1,9 +1,14 @@
-#include "register_map.h"
+#include "src/storage/register_map.h"
 
 #include "mxc_errors.h"
 #include "mxc_lock.h"
 
 #include "src/storage/register.h"
+#include "src/storage/register_with_read_flag.h"
+#include "src/storage/register_with_write_flag.h"
+#include "src/storage/register_multi.h"
+
+using namespace storage;
 
 Registermap* Registermap::instance = nullptr;
 uint32_t Registermap::lock = 0;
@@ -20,13 +25,18 @@ Registermap::Registermap()
         };
 
     board_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x00, 0x00);
-    fusion_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x00, 0x00);
+
+    fusion_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x01, 0x00);
     fusion_status_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
-    sensor_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x00, 0x00);
+
+    sensor_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x00, 0x55);
     sensor_status_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
+
     sensor_calibration_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x00, 0x00);
     sensor_calibration_status_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
+
     data_ready_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
+    
     gyroscope_fusion_registers = new storage::MultiRegister<uint8_t, uint8_t>(12, true, make_registers_with_read_flag);
     accelerometer_fusion_registers = new storage::MultiRegister<uint8_t, uint8_t>(12, true, make_registers_with_read_flag);
     magnetometer_fusion_registers = new storage::MultiRegister<uint8_t, uint8_t>(12, true, make_registers_with_read_flag);
@@ -138,7 +148,7 @@ void Registermap::reset()
     // TODO: 
 }
 
-storage::MultiRegisterInterface<uint8_t, uint8_t>* Registermap::get_addressable_base() const
+storage::MultiRegisterInterface<uint8_t, uint8_t>* Registermap::get_base() const
 {
     return registers;
 }
