@@ -9,13 +9,15 @@ template<typename RegisterType, typename AddressType>
 class Register : public RegisterInterface<RegisterType, AddressType>
 {
 protected:
-    RegisterType write_mask = 0;
-    RegisterType value = 0;
+    volatile RegisterType write_mask = 0;
+    volatile RegisterType value = 0;
+    volatile bool write_enabled = true; /** Disables register writes while keeping the write mask unchanged. */
 
 public:
     Register(RegisterType write_mask, RegisterType value)
         : write_mask{ write_mask }
         , value{ value }
+        , write_enabled{ true }
     { }
     virtual ~Register() { }
 
@@ -34,6 +36,16 @@ public:
         return 0;
     }
 
+    virtual bool is_write_enabled() override
+    {
+        return write_enabled;
+    }
+
+    virtual void set_write_enabled(bool value) override
+    {
+        write_enabled = value;
+    }
+
     virtual void read(RegisterType& read_value, bool mark_read=true) override
     {
         read_value = value;
@@ -48,25 +60,28 @@ public:
 
     virtual void write(RegisterType write_value, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
+        if (!write_enabled) return;
         if (use_write_mask) value = (value & (~write_mask)) | (write_value & write_mask);
         else value = write_value;
     }
 
     virtual bool write(const RegisterType* buffer, AddressType write_length, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
-        if (write_length != 1) return false;
+        if (!write_enabled || write_length != 1) return false;
         write(buffer[0], use_write_mask, mark_changed_bits);
         return true;
     }
 
     virtual void set_bits(RegisterType bits_value, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
+        if (!write_enabled) return;
         if (use_write_mask) value |= (value & (~write_mask)) | (bits_value & write_mask);
         else value |= bits_value;
     }
 
     virtual void clear_bits(RegisterType bits_value, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
+        if (!write_enabled) return;
         if (use_write_mask) value &= (value & (~write_mask)) | ((~bits_value) & write_mask);
         else value &= (~bits_value);
     }

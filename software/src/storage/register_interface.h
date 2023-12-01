@@ -21,6 +21,8 @@ public:
     virtual void set_read_flag() = 0;
     virtual bool get_read_flag() const = 0;
     virtual RegisterType get_written_bit_mask() = 0;
+    virtual bool is_write_enabled() = 0;
+    virtual void set_write_enabled(bool value) = 0;
 
     virtual void read(RegisterType& value, bool mark_read=true) = 0;
     virtual bool read(RegisterType* buffer, AddressType length, bool mark_read=true) = 0;

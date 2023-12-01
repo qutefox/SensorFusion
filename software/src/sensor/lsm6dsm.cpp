@@ -3,7 +3,6 @@
 #include "mxc_errors.h"
 #include "mxc_lock.h"
 
-#include "src/processor_logic/data_processor.h"
 #include "src/sensor/lsm6dsm-pid/lsm6dsm_reg.h"
 #include "src/debug_print.h"
 
@@ -100,8 +99,8 @@ int Lsm6dsm::begin()
     if(has_error())
     {
         // No reason to go forward. We can give up here and now.
-        data_processor->set_gyroscope_sensor_error(true);
-        data_processor->set_accelerometer_sensor_error(true);
+        register_map_helper->set_gyroscope_sensor_error(true);
+        register_map_helper->set_accelerometer_sensor_error(true);
         return err;
     }
 
@@ -118,7 +117,7 @@ int Lsm6dsm::begin()
     // Set interrupt pin polarity to active low.
     err |= lsm6dsm_pin_polarity_set(dev_ctx, LSM6DSM_ACTIVE_LOW);
     // Set gyro full-scale.
-    err1 |= lsm6dsm_gy_full_scale_set(dev_ctx, LSM6DSM_500dps);
+    err1 |= lsm6dsm_gy_full_scale_set(dev_ctx, LSM6DSM_2000dps);
     // Set gyro low pass bandwidth.
     err1 |= lsm6dsm_gy_band_pass_set(dev_ctx, LSM6DSM_LP2_ONLY);
     // Set accel full-scale.
@@ -160,8 +159,8 @@ int Lsm6dsm::begin()
     }
 
     bool in_error_state = has_error();
-    data_processor->set_gyroscope_sensor_error(in_error_state);
-    data_processor->set_accelerometer_sensor_error(in_error_state);
+    register_map_helper->set_gyroscope_sensor_error(in_error_state);
+    register_map_helper->set_accelerometer_sensor_error(in_error_state);
     if (in_error_state) return E_FAIL;
     return E_NO_ERROR;
 }
@@ -184,14 +183,19 @@ int Lsm6dsm::end()
     }
 
     bool in_error_state = has_error();
-    data_processor->set_gyroscope_sensor_error(in_error_state);
-    data_processor->set_accelerometer_sensor_error(in_error_state);
+    register_map_helper->set_gyroscope_sensor_error(in_error_state);
+    register_map_helper->set_accelerometer_sensor_error(in_error_state);
     if (in_error_state) return E_FAIL;
     return E_NO_ERROR;
 }
 
 int Lsm6dsm::set_power_mode(uint8_t device_index, PowerMode power_mode)
 {
+    if (lsm6dsm_timestamp_raw_get(dev_ctx, &raw_timestamp.u32bit) == E_NO_ERROR)
+    {
+        fusion_data->update_timestamp(raw_timestamp);
+    }
+    
     switch (power_mode)
     {
     default:
@@ -251,17 +255,67 @@ int Lsm6dsm::set_power_mode(uint8_t device_index, PowerMode power_mode)
     if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_GYRO)
     {
         bool gyroscope_err = (err != E_NO_ERROR) || (err1 != E_NO_ERROR);
-        data_processor->set_gyroscope_sensor_error(gyroscope_err);
+        register_map_helper->set_gyroscope_sensor_error(gyroscope_err);
         return gyroscope_err;
     }
     else if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_ACCEL)
     {
         bool accelerometer_err = (err != E_NO_ERROR) || (err2 != E_NO_ERROR);
-        data_processor->set_accelerometer_sensor_error(accelerometer_err);
+        register_map_helper->set_accelerometer_sensor_error(accelerometer_err);
         return accelerometer_err;
     }
 
     return E_NO_DEVICE;
+}
+
+uint16_t Lsm6dsm::get_sample_rate_in_hz(uint8_t device_index)
+{
+    if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_GYRO)
+    {
+        debug_print("getting gyro sample rate in hz.\n");
+        lsm6dsm_odr_g_t odr;
+        lsm6dsm_gy_data_rate_get(dev_ctx, &odr);
+
+        switch (odr)
+        {
+        case lsm6dsm_odr_g_t::LSM6DSM_GY_ODR_OFF:    return 0;
+        case lsm6dsm_odr_g_t::LSM6DSM_GY_ODR_12Hz5:  return 12;
+        case lsm6dsm_odr_g_t::LSM6DSM_GY_ODR_26Hz:   return 26;
+        case lsm6dsm_odr_g_t::LSM6DSM_GY_ODR_52Hz:   return 52;
+        case lsm6dsm_odr_g_t::LSM6DSM_GY_ODR_104Hz:  return 104;
+        case lsm6dsm_odr_g_t::LSM6DSM_GY_ODR_208Hz:  return 208;
+        case lsm6dsm_odr_g_t::LSM6DSM_GY_ODR_416Hz:  return 416;
+        case lsm6dsm_odr_g_t::LSM6DSM_GY_ODR_833Hz:  return 833;
+        case lsm6dsm_odr_g_t::LSM6DSM_GY_ODR_1k66Hz: return 1660;
+        case lsm6dsm_odr_g_t::LSM6DSM_GY_ODR_3k33Hz: return 3330;
+        case lsm6dsm_odr_g_t::LSM6DSM_GY_ODR_6k66Hz: return 6660;
+        }
+        return 0;
+    }
+    else if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_ACCEL)
+    {
+        lsm6dsm_odr_xl_t odr;
+        lsm6dsm_xl_data_rate_get(dev_ctx, &odr);
+
+        switch (odr)
+        {
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_OFF:    return 0;
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_12Hz5:  return 12;
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_26Hz:   return 26;
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_52Hz:   return 52;
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_104Hz:  return 104;
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_208Hz:  return 208;
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_416Hz:  return 416;
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_833Hz:  return 833;
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_1k66Hz: return 1660;
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_3k33Hz: return 3330;
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_6k66Hz: return 6660;
+        case lsm6dsm_odr_xl_t::LSM6DSM_XL_ODR_1Hz6:   return 1;
+        }
+        return 0;
+    }
+
+    return 0;
 }
 
 int Lsm6dsm::handle_interrupt()
@@ -285,7 +339,7 @@ int Lsm6dsm::handle_interrupt1()
 {
     if (lsm6dsm_timestamp_raw_get(dev_ctx, &raw_timestamp.u32bit) == E_NO_ERROR)
     {
-        data_processor->update_timestamp(raw_timestamp);
+        fusion_data->update_timestamp(raw_timestamp);
     }
 
     gyroscope_data_ready = false;
@@ -300,7 +354,7 @@ int Lsm6dsm::handle_interrupt1()
         accelerometer_err = lsm6dsm_acceleration_raw_get(dev_ctx, raw_accelerometer.i16bit);
         if (accelerometer_err == E_NO_ERROR)
         {
-            data_processor->update_accelerometer_fusion_vector(
+            fusion_data->update_accelerometer(
                 {
                     lsm6dsm_from_fs2g_to_mg(raw_accelerometer.i16bit[0]),
                     lsm6dsm_from_fs2g_to_mg(raw_accelerometer.i16bit[1]),
@@ -308,7 +362,7 @@ int Lsm6dsm::handle_interrupt1()
                 }
             );
         }
-        data_processor->set_accelerometer_sensor_error(accelerometer_err != E_NO_ERROR);
+        register_map_helper->set_accelerometer_sensor_error(accelerometer_err != E_NO_ERROR);
     }
 
     if (gyroscope_data_ready)
@@ -316,15 +370,15 @@ int Lsm6dsm::handle_interrupt1()
         gyroscope_err = lsm6dsm_angular_rate_raw_get(dev_ctx, raw_gyroscope.i16bit);
         if (gyroscope_err == E_NO_ERROR)
         {
-            data_processor->update_gyroscope_fusion_vector(
+            fusion_data->update_gyroscope(
                 {
-                    lsm6dsm_from_fs500dps_to_mdps(raw_gyroscope.i16bit[0]),
-                    lsm6dsm_from_fs500dps_to_mdps(raw_gyroscope.i16bit[1]),
-                    lsm6dsm_from_fs500dps_to_mdps(raw_gyroscope.i16bit[2])
+                    lsm6dsm_from_fs2000dps_to_mdps(raw_gyroscope.i16bit[0]),
+                    lsm6dsm_from_fs2000dps_to_mdps(raw_gyroscope.i16bit[1]),
+                    lsm6dsm_from_fs2000dps_to_mdps(raw_gyroscope.i16bit[2])
                 }
             );
         }
-        data_processor->set_gyroscope_sensor_error(gyroscope_err != E_NO_ERROR);
+        register_map_helper->set_gyroscope_sensor_error(gyroscope_err != E_NO_ERROR);
     }
 
     return gyroscope_err || accelerometer_err;
@@ -335,7 +389,7 @@ int Lsm6dsm::handle_interrupt2()
     int temp_err = lsm6dsm_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
     if (temp_err == E_NO_ERROR)
     {
-        data_processor->update_temperature(raw_temperature);
+        fusion_data->update_temperature(raw_temperature);
     }
     return temp_err;
 }

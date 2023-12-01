@@ -9,7 +9,7 @@ template<typename RegisterType, typename AddressType>
 class RegisterWithReadFlag : public Register<RegisterType, AddressType>
 {
 protected:
-    bool read_flag = false;
+    volatile bool read_flag = false;
 
 public:
     RegisterWithReadFlag(RegisterType write_mask, RegisterType value)
@@ -36,6 +36,7 @@ public:
 
     virtual void write(RegisterType write_value, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
+        if (!this->write_enabled) return;
         if (use_write_mask) this->value = (this->value & (~this->write_mask)) | (write_value & this->write_mask);
         else this->value = write_value;
         read_flag = false;

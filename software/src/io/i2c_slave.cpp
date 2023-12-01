@@ -15,7 +15,9 @@ uint32_t I2cSlave::lock = 0;
 
 I2cSlave::I2cSlave()
 	: transaction_done{ false }
-	, register_map{ storage::Registermap::get_instance()->get_base() }
+	, register_map{ storage::RegisterMap::get_instance()->get_base() }
+	, read_flag{ false }
+	, write_flag{ false }
 {
 
 }
@@ -47,6 +49,8 @@ int I2cSlave::begin(uint8_t slave_address)
 	int freq = MXC_I2C_SetFrequency(MXC_I2C_GET_I2C(I2C_SLAVE), I2C_SLAVE_SPEED);
 	if (freq < 0) err |= E_FAIL;
 	err |= MXC_I2C_SetClockStretching(MXC_I2C_GET_I2C(I2C_SLAVE), 1);
+	// Setting 10 millisec timeout so we can detect i2c bus off.
+	MXC_I2C_SetTimeout(MXC_I2C_GET_I2C(I2C_SLAVE), 10000);
 
 	// Enable I2C interrupt
 	MXC_NVIC_SetVector(MXC_I2C_GET_IRQ(I2C_SLAVE),
@@ -66,6 +70,22 @@ int I2cSlave::begin(uint8_t slave_address)
     return err;
 }
 
+bool I2cSlave::has_got_read_request()
+{
+	bool tmp = false;
+	tmp = read_flag;
+	read_flag = false;
+	return tmp;
+}
+
+bool I2cSlave::has_got_write_request()
+{
+	bool tmp = false;
+	tmp = write_flag;
+	write_flag = false;
+	return tmp;
+}
+
 void I2cSlave::reset_state()
 {
 	num_rx = 0;
@@ -76,7 +96,7 @@ void I2cSlave::reset_state()
 int I2cSlave::prepare_for_next_transaction()
 {
 	transaction_done = false;
-
+	
 	return MXC_I2C_SlaveTransactionAsync(MXC_I2C_GET_I2C(I2C_SLAVE),
 		[](mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, void* retVal)->int
 		{
@@ -159,6 +179,7 @@ void I2cSlave::send_data()
 	{
 		register_map->read(address, tx_byte, true);
 		address += MXC_I2C_WriteTXFIFO(MXC_I2C_GET_I2C(I2C_SLAVE), &tx_byte, 1);
+		read_flag = true;
 	}
 }
 
@@ -196,6 +217,7 @@ void I2cSlave::store_data()
 
 	// Write bytes from buffer. Write address check is built into write.
 	address += register_map->write(address, &rx_buf[I2C_SLAVE_ADDR_SIZE], num_rx, true, true);
+	write_flag = true;
 }
 
 void I2cSlave::transaction_complete(int err)

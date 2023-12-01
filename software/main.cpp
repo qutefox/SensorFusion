@@ -8,7 +8,7 @@
 #include "uart.h"
 
 #include "src/sensor_fusion_board.h"
-#include "src/processor_logic/data_processor.h"
+#include "src/processor_logic/controller.h"
 
 #include "src/debug_print.h"
 
@@ -25,41 +25,37 @@ int main()
 
 	SensorFusionBoard* board = SensorFusionBoard::get_instance();
 
-	debug_print("About to initaise board.\n");
+	debug_print("About to init board.\n");
 
 	int board_err = board->begin();
 	if (board_err != E_NO_ERROR)
 	{
-		debug_print("Failed to initaise board: %d.\n", board_err);
+		debug_print("Failed to initialize board: %d.\n", board_err);
 	}
 	else
 	{
-		debug_print("Board successfully initaised.\n");
+		debug_print("Board successfully initialized.\n");
 	}
 
-	DataProcessor* data_processor = DataProcessor::get_instance();
+	Controller* controller = Controller::get_instance();
 
 	__enable_irq();
 
-	debug_print("Entering main loop.\n");
-
 	while (true)
 	{
-		// debug_print("going to sleep.\n");
-		// Changes are made in an interrupt handler where we cannot process them.
-		// So we process them here after waking up for any reason.
-		board->prepare_for_sleep();
-		MXC_LP_EnterSleepMode();
-		// MXC_LP_EnterDeepSleepMode();
-
-		// debug_print("waking up.\n");
+		if (board->can_go_sleep())
+		{
+			board->prepare_for_sleep();
+			MXC_LP_EnterSleepMode();
+			// MXC_LP_EnterDeepSleepMode();
+		}
 
 		// Handle sensor interrupt(s).
 		board->handle_sensor_interrupts();
 
-		// Handle registermap update(s).
-		data_processor->update_register_map();
-    }
+		// Controller update.
+		controller->handle_wakeup();
+}
 
     return E_NO_ERROR;
 }

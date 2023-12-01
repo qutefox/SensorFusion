@@ -73,7 +73,7 @@ int Lps22hb::begin()
     if(has_error())
     {
         // No reason to go forward. We can give up here and now.
-        data_processor->set_barometer_sensor_error(true);
+        register_map_helper->set_barometer_sensor_error(true);
         return err;
     }
 
@@ -101,7 +101,7 @@ int Lps22hb::begin()
             }, this); // Passing the this pointer as the callback data.
     }
 
-    data_processor->set_barometer_sensor_error(has_error());
+    register_map_helper->set_barometer_sensor_error(has_error());
     return err;
 }
 
@@ -113,7 +113,7 @@ int Lps22hb::end()
     {
         interrupt_pin->detach_interrupt_callback();
     }
-    data_processor->set_barometer_sensor_error(has_error());
+    register_map_helper->set_barometer_sensor_error(has_error());
     return err;
 }
 
@@ -142,7 +142,7 @@ int Lps22hb::set_power_mode(uint8_t device_index, PowerMode power_mode)
         break;
     }
 
-    data_processor->set_barometer_sensor_error(has_error());
+    register_map_helper->set_barometer_sensor_error(has_error());
 
     if (power_mode != PowerMode::POWER_DOWN)
     {
@@ -153,6 +153,24 @@ int Lps22hb::set_power_mode(uint8_t device_index, PowerMode power_mode)
     return err;
 }
 
+uint16_t Lps22hb::get_sample_rate_in_hz(uint8_t device_index)
+{
+    if (device_index != 0) return 0;
+    
+    lps22hb_odr_t odr;
+    lps22hb_data_rate_get(dev_ctx, &odr);
+    switch (odr)
+    {
+    case lps22hb_odr_t::LPS22HB_POWER_DOWN: return 0;
+    case lps22hb_odr_t::LPS22HB_ODR_1_Hz:   return 1;
+    case lps22hb_odr_t::LPS22HB_ODR_10_Hz:  return 10;
+    case lps22hb_odr_t::LPS22HB_ODR_25_Hz:  return 25;
+    case lps22hb_odr_t::LPS22HB_ODR_50_Hz:  return 50;
+    case lps22hb_odr_t::LPS22HB_ODR_75_Hz:  return 75;
+    }
+    return 0;
+}
+
 int Lps22hb::handle_interrupt()
 {
     err |= lps22hb_data_ready_get(dev_ctx, &pressure_data_ready, &temperature_data_ready);
@@ -160,16 +178,16 @@ int Lps22hb::handle_interrupt()
     if (pressure_data_ready)
     {
         err |= lps22hb_pressure_raw_get(dev_ctx, &raw_pressure.u32bit);
-        data_processor->update_pressure(raw_pressure);
+        fusion_data->update_pressure(raw_pressure);
     }
 
     if (temperature_data_ready)
     {
         err |= lps22hb_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
-        data_processor->update_temperature(raw_temperature);
+        fusion_data->update_temperature(raw_temperature);
     }
 
     interrupt_active = false;
-    data_processor->set_barometer_sensor_error(has_error());
+    register_map_helper->set_barometer_sensor_error(has_error());
     return err;
 }

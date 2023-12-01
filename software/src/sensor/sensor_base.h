@@ -6,7 +6,9 @@
 
 #include "sensor_interface.h"
 #include "src/io/i2c_device_interface.h"
-#include "src/processor_logic/data_processor_interface.h"
+#include "src/storage/register_map_interface.h"
+#include "src/storage/register_map_helper.h"
+#include "src/processor_logic/fusion_data_interface.h"
 
 // Forward declare types.
 struct _stmdev_ctx_t;
@@ -18,7 +20,9 @@ namespace sensor
 class SensorBase : public SensorInterface
 {
 protected:
-    DataProcessorInterface* data_processor = nullptr;
+    storage::RegisterMapInterface* register_map = nullptr;
+    storage::RegisterMapHelper* register_map_helper = nullptr;
+    FusionDataInterface* fusion_data = nullptr;
     io::I2cDeviceInterface* i2c_device = nullptr;
     stmdev_ctx_t* dev_ctx = nullptr;
     bool interrupt_active = false;

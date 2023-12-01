@@ -3,7 +3,6 @@
 #include "mxc_errors.h"
 #include "mxc_lock.h"
 
-#include "src/processor_logic/data_processor.h"
 #include "src/sensor/lis2mdl-pid/lis2mdl_reg.h"
 #include "src/debug_print.h"
 
@@ -69,7 +68,7 @@ int Lis2mdl::begin()
     if(has_error())
     {
         // No reason to go forward. We can give up here and now.
-        data_processor->set_magnetometer_sensor_error(true);
+        register_map_helper->set_magnetometer_sensor_error(true);
         return err;
     }
 
@@ -96,7 +95,7 @@ int Lis2mdl::begin()
             }, this); // Passing the this pointer as the callback data.
     }
 
-    data_processor->set_magnetometer_sensor_error(has_error());
+    register_map_helper->set_magnetometer_sensor_error(has_error());
     return err;
 }
 
@@ -108,7 +107,7 @@ int Lis2mdl::end()
     {
         interrupt_pin->detach_interrupt_callback();
     }
-    data_processor->set_magnetometer_sensor_error(has_error());
+    register_map_helper->set_magnetometer_sensor_error(has_error());
     return err;
 }
 
@@ -140,7 +139,7 @@ int Lis2mdl::set_power_mode(uint8_t device_index, PowerMode power_mode)
         break;
     }
 
-    data_processor->set_magnetometer_sensor_error(has_error());
+    register_map_helper->set_magnetometer_sensor_error(has_error());
 
     if (power_mode != PowerMode::POWER_DOWN)
     {
@@ -151,10 +150,30 @@ int Lis2mdl::set_power_mode(uint8_t device_index, PowerMode power_mode)
     return err;
 }
 
+uint16_t Lis2mdl::get_sample_rate_in_hz(uint8_t device_index)
+{
+    if (device_index != 0) return 0;
+    
+    lis2mdl_md_t md;
+    lis2mdl_operating_mode_get(dev_ctx, &md);
+    if (md == lis2mdl_md_t::LIS2MDL_POWER_DOWN) return 0;
+
+    lis2mdl_odr_t odr;
+    lis2mdl_data_rate_get(dev_ctx, &odr);
+    switch (odr)
+    {
+    case lis2mdl_odr_t::LIS2MDL_ODR_10Hz:  return 10;
+    case lis2mdl_odr_t::LIS2MDL_ODR_20Hz:  return 20;
+    case lis2mdl_odr_t::LIS2MDL_ODR_50Hz:  return 50;
+    case lis2mdl_odr_t::LIS2MDL_ODR_100Hz: return 100;
+    }
+    return 0;
+}
+
 int Lis2mdl::handle_interrupt()
 {
     err |= lis2mdl_magnetic_raw_get(dev_ctx, raw_mag.i16bit);
-    data_processor->update_magnetometer_fusion_vector(
+    fusion_data->update_magnetometer(
         {
             lis2mdl_from_lsb_to_mgauss(raw_mag.i16bit[0]),
             lis2mdl_from_lsb_to_mgauss(raw_mag.i16bit[1]),
@@ -163,8 +182,8 @@ int Lis2mdl::handle_interrupt()
     );
 
     err |= lis2mdl_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
-    data_processor->update_temperature(raw_temperature);
+    fusion_data->update_temperature(raw_temperature);
     
-    data_processor->set_magnetometer_sensor_error(has_error());
+    register_map_helper->set_magnetometer_sensor_error(has_error());
     return err;
 }

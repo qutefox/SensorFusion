@@ -44,6 +44,7 @@ public:
     virtual int end() override;
     
     virtual int set_power_mode(uint8_t device_index, PowerMode power_mode = PowerMode::POWER_DOWN) override;
+    virtual uint16_t get_sample_rate_in_hz(uint8_t device_index) override;
     virtual int handle_interrupt() override;
 };
 

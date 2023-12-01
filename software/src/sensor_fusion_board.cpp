@@ -10,6 +10,7 @@
 #include "src/io/digital_input_pin.h"
 #include "src/io/digital_output_pin.h"
 #include "src/io/i2c_slave.h"
+#include "src/storage/flash.h"
 #include "src/sensor/lps22hb.h"
 #include "src/sensor/lsm6dsm.h"
 #include "src/sensor/lis2mdl.h"
@@ -19,7 +20,7 @@ SensorFusionBoard* SensorFusionBoard::instance = nullptr;
 uint32_t SensorFusionBoard::lock = 0;
 
 SensorFusionBoard::SensorFusionBoard()
-    : flash_data{ nullptr }
+    : flash{ nullptr }
     , led_pin{ nullptr }
     , host_interrupt_pin{ nullptr }
     , i2c_slave_address_select_pin{ nullptr }
@@ -59,9 +60,9 @@ int SensorFusionBoard::begin()
 {
     int err = E_NO_ERROR;
 
-    // Initalise flash data storage. Not sure but I think this should go before
+    // Initalise flash storage. Not sure but I think this should go before
     // anything else.
-    flash_data = storage::FlashData::get_instance();
+    flash = storage::Flash::get_instance();
 
     // Initalise LED output pin.
     led_pin = new io::DigitalOutputPin(MXC_GPIO0, LED_PIN_MASK);
@@ -128,6 +129,21 @@ void SensorFusionBoard::start_i2c_slave()
         MXC_Delay(MXC_DELAY_MSEC(500));
         NVIC_SystemReset();
     }
+}
+
+bool SensorFusionBoard::can_go_sleep()
+{
+    if (
+        i2c_slave->has_got_read_request() ||
+        i2c_slave->has_got_write_request() ||
+        barometer_sensor->has_interrupt() ||
+        magnetometer_sensor->has_interrupt() ||
+        inertial_sensor->has_interrupt()
+    )
+    {
+        return false;
+    }
+    return true;
 }
 
 void SensorFusionBoard::prepare_for_sleep()

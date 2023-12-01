@@ -26,7 +26,9 @@ private:
     uint8_t tx_byte = 0;
 	bool overflow; // Rx buffer overflowed during transaction
     volatile bool transaction_done = false;
-    storage::MultiRegisterInterface<uint8_t, uint8_t>* register_map;
+    storage::MultiRegisterInterface<uint8_t, uint8_t>* register_map; // Oddly we use raw pointer and not interface.
+    volatile bool read_flag = false;
+    volatile bool write_flag = false;
 
     int event_handler(mxc_i2c_regs_t* i2c, mxc_i2c_slave_event_t event, void* retVal);
 
@@ -50,6 +52,8 @@ public:
     virtual int begin(uint8_t slave_address) override;
     int prepare_for_next_transaction();
     virtual bool is_current_transaction_done() const override { return transaction_done; }
+    virtual bool has_got_read_request() override;
+    virtual bool has_got_write_request() override;
 };
 
 } // namespace io

@@ -7,219 +7,289 @@
 #include "src/storage/register_with_read_flag.h"
 #include "src/storage/register_with_write_flag.h"
 #include "src/storage/register_multi.h"
+#include "src/storage/register_fields.h"
 
 using namespace storage;
 
-Registermap* Registermap::instance = nullptr;
-uint32_t Registermap::lock = 0;
+RegisterMap* RegisterMap::instance = nullptr;
+uint32_t RegisterMap::lock = 0;
 
-Registermap::Registermap()
+RegisterMap::RegisterMap()
 {
-    auto make_registers_with_read_flag =
+    auto make_data_registers =
         [](storage::RegisterInterface<uint8_t, uint8_t>** registers, uint8_t length)
         {
+            uint8_t write_mask = 0x00;
+            uint8_t default_value = 0x00;
             for (uint8_t i = 0 ; i < length ; ++i)
             {
-                registers[i] = new storage::RegisterWithReadFlag<uint8_t, uint8_t>(0x00, 0x00);
+                registers[i] = new storage::RegisterWithReadFlag<uint8_t, uint8_t>(write_mask, default_value);
             }
         };
 
-    board_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x00, 0x00);
+    auto make_calibration_registers =
+        [](storage::RegisterInterface<uint8_t, uint8_t>** registers, uint8_t length)
+        {
+            uint8_t write_mask = 0xFF;
+            uint8_t default_value = 0x00;
+            for (uint8_t i = 0 ; i < length ; ++i)
+            {
+                registers[i] = new storage::Register<uint8_t, uint8_t>(write_mask, default_value);
+            }
+        };
 
-    fusion_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x03, 0x00);
-    fusion_status_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
-
-    sensor_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x00, 0x55);
-    sensor_status_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
-
-    sensor_calibration_control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(0x00, 0x00);
-    sensor_calibration_status_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
-
-    data_ready_register = new storage::Register<uint8_t, uint8_t>(0x00, 0x00);
+    control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(CONTROL_REGISTER_WRITE_MASK, CONTROL_REGISTER_DEFAULT_VALUE);
+    status_register = new storage::Register<uint8_t, uint8_t>(STATUS_REGISTER_WRITE_MASK, STATUS_REGISTER_DEFAULT_VALUE);
+    powermode_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(POWERMODE_REGISTER_WRITE_MASK, POWERMODE_REGISTER_DEFAULT_VALUE);
+    data_ready_register = new storage::Register<uint8_t, uint8_t>(DATA_READY_REGISTER_WRITE_MASK, DATA_READY_REGISTER_DEFAULT_VALUE);
     
-    gyroscope_fusion_registers = new storage::MultiRegister<uint8_t, uint8_t>(12, true, make_registers_with_read_flag);
-    accelerometer_fusion_registers = new storage::MultiRegister<uint8_t, uint8_t>(12, true, make_registers_with_read_flag);
-    magnetometer_fusion_registers = new storage::MultiRegister<uint8_t, uint8_t>(12, true, make_registers_with_read_flag);
-    quaternion_fusion_registers = new storage::MultiRegister<uint8_t, uint8_t>(16, true, make_registers_with_read_flag);
-    pressure_registers = new storage::MultiRegister<uint8_t, uint8_t>(3, true, make_registers_with_read_flag);
-    temperature_registers = new storage::MultiRegister<uint8_t, uint8_t>(2, true, make_registers_with_read_flag);
+    quaternion_data_register = new storage::MultiRegister<uint8_t, uint8_t>(QUATERNION_DATA_REGISTER_LENGTH, true, make_data_registers);
+    euler_data_register = new storage::MultiRegister<uint8_t, uint8_t>(EULER_DATA_REGISTER_LENGTH, true, make_data_registers);
+    earth_data_register = new storage::MultiRegister<uint8_t, uint8_t>(EARTH_DATA_REGISTER_LENGTH, true, make_data_registers);
+    gyroscope_data_register = new storage::MultiRegister<uint8_t, uint8_t>(GYROSCOPE_DATA_REGISTER_LENGTH, true, make_data_registers);
+    accelerometer_data_register = new storage::MultiRegister<uint8_t, uint8_t>(ACCELEROMETER_DATA_REGISTER_LENGTH, true, make_data_registers);
+    magnetometer_data_register = new storage::MultiRegister<uint8_t, uint8_t>(MAGNETOMETER_DATA_REGISTER_LENGTH, true, make_data_registers);
+    pressure_data_register = new storage::MultiRegister<uint8_t, uint8_t>(PRESSURE_DATA_REGISTER_LENGTH, true, make_data_registers);
+    temperature_data_register = new storage::MultiRegister<uint8_t, uint8_t>(TEMPERATURE_DATA_REGISTER_LENGTH, true, make_data_registers);
 
-    registers = new storage::MultiRegister<uint8_t, uint8_t>(65, false, // 8 + (3*12) + 16 + 3 + 2 = 65
+    gyroscope_misalignment_register = new storage::MultiRegister<uint8_t, uint8_t>(GYROSCOPE_MISALIGNMENT_REGISTER_LENGTH, true, make_calibration_registers);
+    gyroscope_sensitivity_register = new storage::MultiRegister<uint8_t, uint8_t>(GYROSCOPE_SENSITIVITY_REGISTER_LENGTH, true, make_calibration_registers);
+    gyroscope_offset_register = new storage::MultiRegister<uint8_t, uint8_t>(GYROSCOPE_OFFSET_REGISTER_LENGTH, true, make_calibration_registers);
+
+    accelerometer_misalignment_register = new storage::MultiRegister<uint8_t, uint8_t>(ACCELEROMETER_MISALIGNMENT_REGISTER_LENGTH, true, make_calibration_registers);
+    accelerometer_sensitivity_register = new storage::MultiRegister<uint8_t, uint8_t>(ACCELEROMETER_SENSITIVITY_REGISTER_LENGTH, true, make_calibration_registers);
+    accelerometer_offset_register = new storage::MultiRegister<uint8_t, uint8_t>(ACCELEROMETER_OFFSET_REGISTER_LENGTH, true, make_calibration_registers);
+
+    soft_iron_matrix_register = new storage::MultiRegister<uint8_t, uint8_t>(SOFT_IRON_MATRIX_REGISTER_LENGTH, true, make_calibration_registers);
+    hard_iron_offset_register = new storage::MultiRegister<uint8_t, uint8_t>(HARD_IRON_OFFSET_REGISTER_LENGTH, true, make_calibration_registers);
+
+    registers = new storage::MultiRegister<uint8_t, uint8_t>(REGISTER_MAP_LENGTH, false,
         [this](storage::RegisterInterface<uint8_t, uint8_t>** regs, uint8_t length)
         {
             uint8_t idx = 0;
-            regs[idx++] = board_control_register;
-
-            regs[idx++] = fusion_control_register;
-            regs[idx++] = fusion_status_register;
-
-            regs[idx++] = sensor_control_register;
-            regs[idx++] = sensor_status_register;
-
-            regs[idx++] = sensor_calibration_control_register;
-            regs[idx++] = sensor_calibration_status_register;
-
+            regs[idx++] = control_register;
+            regs[idx++] = status_register;
+            regs[idx++] = powermode_register;
             regs[idx++] = data_ready_register;
 
-            regs[idx++] = gyroscope_fusion_registers;
-            regs[idx++] = gyroscope_fusion_registers->get_register(1);
-            regs[idx++] = gyroscope_fusion_registers->get_register(2);
-            regs[idx++] = gyroscope_fusion_registers->get_register(3);
-            regs[idx++] = gyroscope_fusion_registers->get_register(4);
-            regs[idx++] = gyroscope_fusion_registers->get_register(5);
-            regs[idx++] = gyroscope_fusion_registers->get_register(6);
-            regs[idx++] = gyroscope_fusion_registers->get_register(7);
-            regs[idx++] = gyroscope_fusion_registers->get_register(8);
-            regs[idx++] = gyroscope_fusion_registers->get_register(9);
-            regs[idx++] = gyroscope_fusion_registers->get_register(10);
-            regs[idx++] = gyroscope_fusion_registers->get_register(11);
+            regs[idx++] = quaternion_data_register;
+            for (uint8_t i = 1 ; i < QUATERNION_DATA_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = quaternion_data_register->get_register(i);
+            }
 
-            regs[idx++] = accelerometer_fusion_registers;
-            regs[idx++] = accelerometer_fusion_registers->get_register(1);
-            regs[idx++] = accelerometer_fusion_registers->get_register(2);
-            regs[idx++] = accelerometer_fusion_registers->get_register(3);
-            regs[idx++] = accelerometer_fusion_registers->get_register(4);
-            regs[idx++] = accelerometer_fusion_registers->get_register(5);
-            regs[idx++] = accelerometer_fusion_registers->get_register(6);
-            regs[idx++] = accelerometer_fusion_registers->get_register(7);
-            regs[idx++] = accelerometer_fusion_registers->get_register(8);
-            regs[idx++] = accelerometer_fusion_registers->get_register(9);
-            regs[idx++] = accelerometer_fusion_registers->get_register(10);
-            regs[idx++] = accelerometer_fusion_registers->get_register(11);
+            regs[idx++] = euler_data_register;
+            for (uint8_t i = 1 ; i < EULER_DATA_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = euler_data_register->get_register(i);
+            }
 
-            regs[idx++] = magnetometer_fusion_registers;
-            regs[idx++] = magnetometer_fusion_registers->get_register(1);
-            regs[idx++] = magnetometer_fusion_registers->get_register(2);
-            regs[idx++] = magnetometer_fusion_registers->get_register(3);
-            regs[idx++] = magnetometer_fusion_registers->get_register(4);
-            regs[idx++] = magnetometer_fusion_registers->get_register(5);
-            regs[idx++] = magnetometer_fusion_registers->get_register(6);
-            regs[idx++] = magnetometer_fusion_registers->get_register(7);
-            regs[idx++] = magnetometer_fusion_registers->get_register(8);
-            regs[idx++] = magnetometer_fusion_registers->get_register(9);
-            regs[idx++] = magnetometer_fusion_registers->get_register(10);
-            regs[idx++] = magnetometer_fusion_registers->get_register(11);
+            regs[idx++] = earth_data_register;
+            for (uint8_t i = 1 ; i < EARTH_DATA_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = earth_data_register->get_register(i);
+            }
 
-            regs[idx++] = quaternion_fusion_registers;
-            regs[idx++] = quaternion_fusion_registers->get_register(1);
-            regs[idx++] = quaternion_fusion_registers->get_register(2);
-            regs[idx++] = quaternion_fusion_registers->get_register(3);
-            regs[idx++] = quaternion_fusion_registers->get_register(4);
-            regs[idx++] = quaternion_fusion_registers->get_register(5);
-            regs[idx++] = quaternion_fusion_registers->get_register(6);
-            regs[idx++] = quaternion_fusion_registers->get_register(7);
-            regs[idx++] = quaternion_fusion_registers->get_register(8);
-            regs[idx++] = quaternion_fusion_registers->get_register(9);
-            regs[idx++] = quaternion_fusion_registers->get_register(10);
-            regs[idx++] = quaternion_fusion_registers->get_register(11);
-            regs[idx++] = quaternion_fusion_registers->get_register(12);
-            regs[idx++] = quaternion_fusion_registers->get_register(13);
-            regs[idx++] = quaternion_fusion_registers->get_register(14);
-            regs[idx++] = quaternion_fusion_registers->get_register(15);
+            regs[idx++] = gyroscope_data_register;
+            for (uint8_t i = 1 ; i < GYROSCOPE_DATA_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = gyroscope_data_register->get_register(i);
+            }
 
-            regs[idx++] = pressure_registers;
-            regs[idx++] = pressure_registers->get_register(1);
-            regs[idx++] = pressure_registers->get_register(2);
+            regs[idx++] = accelerometer_data_register;
+            for (uint8_t i = 1 ; i < ACCELEROMETER_DATA_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = accelerometer_data_register->get_register(i);
+            }
 
-            regs[idx++] = temperature_registers;
-            regs[idx++] = temperature_registers->get_register(1);
+            regs[idx++] = magnetometer_data_register;
+            for (uint8_t i = 1 ; i < MAGNETOMETER_DATA_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = magnetometer_data_register->get_register(i);
+            }
+
+            regs[idx++] = pressure_data_register;
+            for (uint8_t i = 1 ; i < PRESSURE_DATA_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = pressure_data_register->get_register(i);
+            }
+
+            regs[idx++] = temperature_data_register;
+            for (uint8_t i = 1 ; i < TEMPERATURE_DATA_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = temperature_data_register->get_register(i);
+            }
+
+            regs[idx++] = gyroscope_misalignment_register;
+            for (uint8_t i = 1 ; i < GYROSCOPE_MISALIGNMENT_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = gyroscope_misalignment_register->get_register(i);
+            }
+
+            regs[idx++] = gyroscope_sensitivity_register;
+            for (uint8_t i = 1 ; i < GYROSCOPE_SENSITIVITY_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = gyroscope_sensitivity_register->get_register(i);
+            }
+
+            regs[idx++] = gyroscope_offset_register;
+            for (uint8_t i = 1 ; i < GYROSCOPE_OFFSET_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = gyroscope_offset_register->get_register(i);
+            }
+
+            regs[idx++] = accelerometer_misalignment_register;
+            for (uint8_t i = 1 ; i < ACCELEROMETER_MISALIGNMENT_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = accelerometer_misalignment_register->get_register(i);
+            }
+
+            regs[idx++] = accelerometer_sensitivity_register;
+            for (uint8_t i = 1 ; i < ACCELEROMETER_SENSITIVITY_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = accelerometer_sensitivity_register->get_register(i);
+            }
+
+            regs[idx++] = accelerometer_offset_register;
+            for (uint8_t i = 1 ; i < ACCELEROMETER_OFFSET_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = accelerometer_offset_register->get_register(i);
+            }
+
+            regs[idx++] = soft_iron_matrix_register;
+            for (uint8_t i = 1 ; i < SOFT_IRON_MATRIX_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = soft_iron_matrix_register->get_register(i);
+            }
+
+            regs[idx++] = hard_iron_offset_register;
+            for (uint8_t i = 1 ; i < HARD_IRON_OFFSET_REGISTER_LENGTH ; ++i)
+            {
+                regs[idx++] = hard_iron_offset_register->get_register(i);
+            }
         }
     );
 }
 
-Registermap::~Registermap()
+RegisterMap::~RegisterMap()
 {
     delete registers;
 }
 
-Registermap* Registermap::get_instance()
+RegisterMap* RegisterMap::get_instance()
 {
     MXC_GetLock(&lock, 1);
     if (instance == nullptr)
     {
-        instance = new Registermap();
+        instance = new RegisterMap();
     }
     MXC_FreeLock(&lock);
     return instance;
 }
 
-void Registermap::reset()
-{
-    // TODO: 
-}
-
-storage::MultiRegisterInterface<uint8_t, uint8_t>* Registermap::get_base() const
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_base() const
 {
     return registers;
 }
 
-storage::RegisterInterface<uint8_t, uint8_t>* Registermap::get_board_control_register() const
+storage::RegisterInterface<uint8_t, uint8_t>* RegisterMap::get_control_register() const
 {
-    return board_control_register;
+    return control_register;
 }
 
-storage::RegisterInterface<uint8_t, uint8_t>* Registermap::get_fusion_control_register() const
+
+storage::RegisterInterface<uint8_t, uint8_t>* RegisterMap::get_status_register() const
 {
-    return fusion_control_register;
+    return status_register;
 }
 
-storage::RegisterInterface<uint8_t, uint8_t>* Registermap::get_fusion_status_register() const
+storage::RegisterInterface<uint8_t, uint8_t>* RegisterMap::get_powermode_register() const
 {
-    return fusion_status_register;
+    return powermode_register;
 }
 
-storage::RegisterInterface<uint8_t, uint8_t>* Registermap::get_sensor_control_register() const
-{
-    return sensor_control_register;
-}
-
-storage::RegisterInterface<uint8_t, uint8_t>* Registermap::get_sensor_status_register() const
-{
-    return sensor_status_register;
-}
-
-storage::RegisterInterface<uint8_t, uint8_t>* Registermap::get_sensor_calibration_control_register() const
-{
-    return sensor_calibration_control_register;
-}
-
-storage::RegisterInterface<uint8_t, uint8_t>* Registermap::get_sensor_calibration_status_register() const
-{
-    return sensor_calibration_status_register;
-}
-
-storage::RegisterInterface<uint8_t, uint8_t>* Registermap::get_data_ready_register() const
+storage::RegisterInterface<uint8_t, uint8_t>* RegisterMap::get_data_ready_register() const
 {
     return data_ready_register;
 }
 
-storage::MultiRegisterInterface<uint8_t, uint8_t>* Registermap::get_gyroscope_fusion_registers() const
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_quaternion_data_register() const
 {
-    return gyroscope_fusion_registers;
+    return quaternion_data_register;
 }
 
-storage::MultiRegisterInterface<uint8_t, uint8_t>* Registermap::get_accelerometer_fusion_registers() const
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_euler_data_register() const
 {
-    return accelerometer_fusion_registers;
+    return euler_data_register;
 }
 
-storage::MultiRegisterInterface<uint8_t, uint8_t>* Registermap::get_magnetometer_fusion_registers() const
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_earth_data_register() const
 {
-    return magnetometer_fusion_registers;
+    return earth_data_register;
 }
 
-storage::MultiRegisterInterface<uint8_t, uint8_t>* Registermap::get_quaternion_fusion_registers() const
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_gyroscope_data_register() const
 {
-    return quaternion_fusion_registers;
+    return gyroscope_data_register;
 }
 
-storage::MultiRegisterInterface<uint8_t, uint8_t>* Registermap::get_pressure_registers() const
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_accelerometer_data_register() const
 {
-    return pressure_registers;
+    return accelerometer_data_register;
 }
 
-storage::MultiRegisterInterface<uint8_t, uint8_t>* Registermap::get_temperature_registers() const
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_magnetometer_data_register() const
 {
-    return temperature_registers;
+    return magnetometer_data_register;
 }
 
+
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_pressure_data_register() const
+{
+    return pressure_data_register;
+}
+
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_temperature_data_register() const
+{
+    return temperature_data_register;
+}
+
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_gyroscope_misalignment_register() const
+{
+    return gyroscope_misalignment_register;
+}
+
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_gyroscope_sensitivity_register() const
+{
+    return gyroscope_sensitivity_register;
+}
+
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_gyroscope_offset_register() const
+{
+    return gyroscope_offset_register;
+}
+
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_accelerometer_misalignment_register() const
+{
+    return accelerometer_misalignment_register;
+}
+
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_accelerometer_sensitivity_register() const
+{
+    return accelerometer_sensitivity_register;
+}
+
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_accelerometer_offset_register() const
+{
+    return accelerometer_offset_register;
+}
+
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_soft_iron_matrix_register() const
+{
+    return soft_iron_matrix_register;
+}
+
+storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_hard_iron_offset_register() const
+{
+    return hard_iron_offset_register;
+}

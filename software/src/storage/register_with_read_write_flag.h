@@ -9,8 +9,8 @@ template<typename RegisterType, typename AddressType>
 class RegisterWithReadWriteFlag : public Register<RegisterType, AddressType>
 {
 protected:
-    bool read_flag = false;
-    RegisterType written_bit_mask = 0;
+    volatile bool read_flag = false;
+    volatile RegisterType written_bit_mask = 0;
 
 public:
     RegisterWithReadWriteFlag(RegisterType write_mask, RegisterType value)
@@ -45,6 +45,7 @@ public:
 
     virtual void write(RegisterType write_value, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
+        if (!this->write_enabled) return;
         RegisterType prev_value = this->value;
 
         if (use_write_mask) this->value = (this->value & (~this->write_mask)) | (write_value & this->write_mask);
@@ -56,6 +57,7 @@ public:
 
     virtual void set_bits(RegisterType bits_value, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
+        if (!this->write_enabled) return;
         RegisterType prev_value = this->value;
 
         if (use_write_mask) this->value |= (this->value & (~this->write_mask)) | (bits_value & this->write_mask);
@@ -66,6 +68,7 @@ public:
 
     virtual void clear_bits(RegisterType bits_value, bool use_write_mask=true, bool mark_changed_bits=true) override
     {
+        if (!this->write_enabled) return;
         RegisterType prev_value = this->value;
 
         if (use_write_mask) this->value &= (this->value & (~this->write_mask)) | ((~bits_value) & this->write_mask);

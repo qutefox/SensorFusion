@@ -96,6 +96,24 @@ public:
         return registers[0]->get_written_bit_mask();
     }
 
+    virtual bool is_write_enabled() override
+    {
+        // if any register write enabled then return true.
+        for (AddressType i = 0; i < length; ++i)
+        {
+            if (registers[i]->is_write_enabled()) return true;
+        }
+        return false;
+    }
+
+    virtual void set_write_enabled(bool value) override
+    {
+        for (AddressType i = 0; i < length; ++i)
+        {
+            registers[i]->set_write_enabled(value);
+        }
+    }
+
     virtual bool get_written_bit_mask(RegisterType& written_bit_mask, AddressType offset) override
     {
         if (offset >= length) return false;

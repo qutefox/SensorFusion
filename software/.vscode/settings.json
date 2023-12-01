@@ -130,7 +130,14 @@
         "netfwd": "cpp",
         "forward_list": "cpp",
         "list": "cpp",
-        "io_context": "cpp"
+        "io_context": "cpp",
+        "condition_variable": "cpp",
+        "executor": "cpp",
+        "timer": "cpp",
+        "future": "cpp",
+        "mutex": "cpp",
+        "stop_token": "cpp",
+        "thread": "cpp"
     }
 }
 

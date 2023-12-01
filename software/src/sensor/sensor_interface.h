@@ -27,6 +27,7 @@ public:
     virtual int end() = 0;
 
     virtual int set_power_mode(uint8_t device_index, PowerMode power_mode = PowerMode::POWER_DOWN) = 0;
+    virtual uint16_t get_sample_rate_in_hz(uint8_t device_index) = 0;
     virtual bool has_error() = 0;
     virtual bool has_interrupt() = 0;
     virtual int handle_interrupt() = 0;
