@@ -23,9 +23,25 @@ region by creating a modified linkerfile.
 
 Flash::Flash()
 {
-    NVIC_SetRAM();
-    // Not sure but: clear interrupt done and interrupt alternate function flags.
-    MXC_FLC_ClearFlags(0x3);
+    // Assign ISR.
+    MXC_NVIC_SetVector(FLC_IRQn,
+        []()
+        {
+            if (MXC_FLC0->intr & MXC_F_FLC_INTR_DONE)
+            {
+                MXC_FLC0->intr &= ~MXC_F_FLC_INTR_DONE;
+            }
+            if (MXC_FLC0->intr & MXC_F_FLC_INTR_ACCESS_FAIL)
+            {
+                MXC_FLC0->intr &= ~MXC_F_FLC_INTR_ACCESS_FAIL;
+            }
+        });
+
+    // Enable interrupt.
+    NVIC_EnableIRQ(FLC_IRQn);
+
+    // Clear and enable flash programming interrupts.
+    MXC_FLC_EnableInt(MXC_F_FLC_INTR_DONE_IE | MXC_F_FLC_INTR_ACCESS_FAIL_IE);
 }
 
 Flash::~Flash()
@@ -54,17 +70,6 @@ int Flash::write(uint8_t address, const uint8_t* in_buffer, uint8_t length)
 {
     int err = E_NO_ERROR;
 
-    // Check if flash controller is busy
-    if (MXC_FLC0->ctrl & MXC_F_FLC_CTRL_BUSY)
-    {
-        return E_BUSY;
-    }
-
-    // Disable the instruction cache controller.
-    // Any code that modifies flash contents should disable the ICC,
-    // since modifying flash contents may invalidate cached instructions.
-    MXC_ICC_Disable();
-
     /*
     To modify a location in flash that has already been written to,
     that location must first be restored to its erased state.
@@ -78,18 +83,32 @@ int Flash::write(uint8_t address, const uint8_t* in_buffer, uint8_t length)
     uint32_t tmp_buffer[MXC_FLASH_PAGE_SIZE >> 2] = { 0xFFFFFFFF };
     MXC_FLC_Read(LAST_FLASH_PAGE_ADDRESS, tmp_buffer, MXC_FLASH_PAGE_SIZE);
 
-    // Erasing page.
-    err = MXC_FLC_PageErase(LAST_FLASH_PAGE_ADDRESS);
-    if (err != E_NO_ERROR) return err;
-
     // Write data to buffer at specified adddress.
     memcpy(tmp_buffer+address, in_buffer, length);
 
-    // Re-writing page from buffer.
-    for (unsigned int i = 0; i < (MXC_FLASH_PAGE_SIZE >> 2); ++i)
-    {
-        err |= MXC_FLC_Write32(LAST_FLASH_PAGE_ADDRESS + 4 * i, tmp_buffer[i]);
-    }
+    // Disable the instruction cache controller.
+    
+    // Any code that modifies flash contents should disable the ICC,
+    // since modifying flash contents may invalidate cached instructions.
+    MXC_ICC_Disable();
+
+    // Macro for wrapping a section of code to make it critical (interrupts disabled).
+    MXC_CRITICAL(
+
+        // Erasing page.
+        err = MXC_FLC_PageErase(LAST_FLASH_PAGE_ADDRESS);
+        if (err != E_NO_ERROR) return err;
+
+        // Re-writing page from buffer.
+        for (unsigned int i = 0; i < (MXC_FLASH_PAGE_SIZE >> 2); ++i)
+        {
+            err |= MXC_FLC_Write32(LAST_FLASH_PAGE_ADDRESS + 4 * i, tmp_buffer[i]);
+        }
+
+    )
+
+    // Enable the instruction cache controller.
+    MXC_ICC_Enable();
 
     // Verify.
     // read() will do the address shift and write to our buffer from the beginning!
@@ -110,8 +129,6 @@ int Flash::write(uint8_t address, const uint8_t* in_buffer, uint8_t length)
         }
     }
 
-    // Enable the instruction cache controller.
-    MXC_ICC_Enable();
     return err;
 }
 

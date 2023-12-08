@@ -32,6 +32,7 @@ private:
     axis3bit16_t raw_gyroscope;
     axis3bit16_t raw_accelerometer;
     timestamp_t raw_timestamp;
+    float celsius;
 
     virtual int reset() override;
     int is_device_id_matching();

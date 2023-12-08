@@ -14,12 +14,12 @@ FusionData::FusionData()
     : register_map{ storage::RegisterMap::get_instance() }
     , register_map_helper{ storage::RegisterMapHelper::get_instance(register_map) }
     , calibration_data{ CalibrationData::get_instance() }
-    , quaternion_fqvect{ 0.0f, 0.0f, 0.0f, 0.0f }
-    , euler{ 0.0f, 0.0f, 0.0f }
-    , earth{ 0.0f, 0.0f, 0.0f }
-    , gyroscope_fvect{ 0.0f, 0.0f, 0.0f }
-    , accelerometer_fvect{ 0.0f, 0.0f, 0.0f }
-    , magnetometer_fvect{ 0.0f, 0.0f, 0.0f }
+    , quaternion_fqvect{ FUSION_IDENTITY_QUATERNION }
+    , euler{ FUSION_EULER_ZERO }
+    , earth{ FUSION_VECTOR_ZERO }
+    , gyroscope_fvect{ FUSION_VECTOR_ZERO }
+    , accelerometer_fvect{ FUSION_VECTOR_ZERO }
+    , magnetometer_fvect{ FUSION_VECTOR_ZERO }
     , pressure{ 0 }
     , temperature{ 0 }
     , timestamp{ 0 }
@@ -90,7 +90,7 @@ void FusionData::reset()
     const FusionAhrsSettings settings = {
         .convention = FusionConventionNwu,
         .gain = 0.5f,
-        .gyroscopeRange = 2000.0f, // gyroscope range in degrees/s
+        .gyroscopeRange = 500.0f, // gyroscope range in degrees/s
         .accelerationRejection = 10.0f,
         .magneticRejection = 10.0f,
         .recoveryTriggerPeriod = 5 * gyro_sample_rate, // 5 seconds
@@ -253,6 +253,7 @@ void FusionData::update_fusion()
     quaternion_fqvect = FusionAhrsGetQuaternion(&ahrs);
     has_new_quaternion_data = true;
     euler =  FusionQuaternionToEuler(quaternion_fqvect);
+    // debug_print("roll %f, pitch %f, yaw: %f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
     has_new_euler_data = true;
     earth = FusionAhrsGetEarthAcceleration(&ahrs);
     has_new_earth_data = true;

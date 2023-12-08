@@ -72,6 +72,7 @@ public:
     void set_data_registers_as_read();
 
     bool is_calibration_uploading();
+    void set_calibration_data_write_enabled(bool write_enabled);
     void set_calibration_uploading_status(bool uploading);
 };
 

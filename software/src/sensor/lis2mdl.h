@@ -17,6 +17,7 @@ private:
     io::DigitalInputPinInterface* interrupt_pin = nullptr;
     axis3bit16_t raw_mag;
     temperature_t raw_temperature;
+    float celsius = 0;
 
     virtual int reset() override;
     int is_device_id_matching();

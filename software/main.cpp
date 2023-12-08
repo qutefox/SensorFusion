@@ -55,7 +55,7 @@ int main()
 
 		// Controller update.
 		controller->handle_wakeup();
-}
+	}
 
     return E_NO_ERROR;
 }

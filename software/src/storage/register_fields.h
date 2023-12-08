@@ -25,31 +25,42 @@ typedef union
     uint8_t bytes[4];
 } float_u;
 
-#define CONTROL_REGISTER_ADDRESS                 0x00
+#define BOARD_REGISTER_ADDRESS        0x00
+#define BOARD_REGISTER_WRITE_MASK     0x01
+#define BOARD_REGISTER_DEFAULT_VALUE  0x00
+#define BOARD_REGISTER_LED_MASK       0x01
+
+typedef struct
+{
+    uint8_t led : 1;
+    uint8_t     : 7;
+} board_t;
+
+#define CONTROL_REGISTER_ADDRESS                 0x01
 #define CONTROL_REGISTER_WRITE_MASK              0xFF
 #define CONTROL_REGISTER_DEFAULT_VALUE           0x20
 #define CONTROL_REGISTER_FUSION_START_MASK       0x01
 #define CONTROL_REGISTER_FUSION_STOP_MASK        0x02
 #define CONTROL_REGISTER_CALIBRATION_START_MASK  0x04
 #define CONTROL_REGISTER_CALIBRATION_STOP_MASK   0x08
-#define CONTROL_REGISTER_CALIBRATION_RESET_MASK  0x10
-#define CONTROL_REGISTER_CALIBRATION_ACTIVE_MASK 0x20
-#define CONTROL_REGISTER_SOFTWARE_RESTART_MASK   0x40
-#define CONTROL_REGISTER_LED_MASK                0x80
+#define CONTROL_REGISTER_CALIBRATION_CANCEL_MASK 0x10
+#define CONTROL_REGISTER_CALIBRATION_RESET_MASK  0x20
+#define CONTROL_REGISTER_CALIBRATION_ACTIVE_MASK 0x40
+#define CONTROL_REGISTER_SOFTWARE_RESTART_MASK   0x80
 
 typedef struct
 {
-    uint8_t fusion_start             : 1;
-    uint8_t fusion_stop              : 1;
-    uint8_t calibration_upload_start : 1;
-    uint8_t calibration_upload_stop  : 1;
-    uint8_t calibration_reset        : 1;
-    uint8_t calibration_active       : 1;
-    uint8_t software_restart         : 1;
-    uint8_t led                      : 1;
+    uint8_t fusion_start              : 1;
+    uint8_t fusion_stop               : 1;
+    uint8_t calibration_upload_start  : 1;
+    uint8_t calibration_upload_stop   : 1;
+    uint8_t calibration_upload_cancel : 1;
+    uint8_t calibration_reset         : 1;
+    uint8_t calibration_active        : 1;
+    uint8_t software_restart          : 1;
 } control_t;
 
-#define STATUS_REGISTER_ADDRESS                    0x01
+#define STATUS_REGISTER_ADDRESS                    0x02
 #define STATUS_REGISTER_WRITE_MASK                 0x00
 #define STATUS_REGISTER_DEFAULT_VALUE              0x00
 #define STATUS_REGISTER_FUSION_RUNNING_MASK        0x01
@@ -71,9 +82,13 @@ typedef struct
     uint8_t baro_error            : 1;
 } status_t;
 
-#define POWERMODE_REGISTER_ADDRESS       0x02
+#define POWERMODE_REGISTER_ADDRESS       0x03
 #define POWERMODE_REGISTER_WRITE_MASK    0xFF
 #define POWERMODE_REGISTER_DEFAULT_VALUE 0x55
+#define POWERMODE_REGISTER_GYRO_MASK     0x03
+#define POWERMODE_REGISTER_ACCEL_MASK    0x0C
+#define POWERMODE_REGISTER_MAG_MASK      0x30
+#define POWERMODE_REGISTER_BARO_MASK     0xC0
 
 typedef struct
 {
@@ -83,7 +98,7 @@ typedef struct
     uint8_t baro_powermode  : 2; // sensor::PowerMode
 } powermode_t;
 
-#define DATA_READY_REGISTER_ADDRESS       0x03
+#define DATA_READY_REGISTER_ADDRESS       0x04
 #define DATA_READY_REGISTER_WRITE_MASK    0x00
 #define DATA_READY_REGISTER_DEFAULT_VALUE 0x00
 #define DATA_READY_REGISTER_QUAT_MASK     0x01
@@ -107,7 +122,7 @@ typedef struct
     uint8_t temp_data_ready   : 1;
 } data_ready_t;
 
-#define QUATERNION_DATA_REGISTER_ADDRESS             0x04
+#define QUATERNION_DATA_REGISTER_ADDRESS             0x05
 #define QUATERNION_DATA_REGISTER_LENGTH              4*4 // 4 * sizeof(float)
 
 #define EULER_DATA_REGISTER_ADDRESS                  (QUATERNION_DATA_REGISTER_ADDRESS + QUATERNION_DATA_REGISTER_LENGTH)
@@ -159,6 +174,7 @@ typedef struct
 
 typedef union
 {
+    board_t      board;
     control_t    control;
     status_t     status;
     powermode_t  powermode;

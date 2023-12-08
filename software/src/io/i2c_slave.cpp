@@ -49,8 +49,8 @@ int I2cSlave::begin(uint8_t slave_address)
 	int freq = MXC_I2C_SetFrequency(MXC_I2C_GET_I2C(I2C_SLAVE), I2C_SLAVE_SPEED);
 	if (freq < 0) err |= E_FAIL;
 	err |= MXC_I2C_SetClockStretching(MXC_I2C_GET_I2C(I2C_SLAVE), 1);
-	// Setting 10 millisec timeout so we can detect i2c bus off.
-	MXC_I2C_SetTimeout(MXC_I2C_GET_I2C(I2C_SLAVE), 10000);
+	// Setting 5 millisec timeout so we can detect i2c bus off.
+	MXC_I2C_SetTimeout(MXC_I2C_GET_I2C(I2C_SLAVE), 5000);
 
 	// Enable I2C interrupt
 	MXC_NVIC_SetVector(MXC_I2C_GET_IRQ(I2C_SLAVE),
@@ -72,16 +72,14 @@ int I2cSlave::begin(uint8_t slave_address)
 
 bool I2cSlave::has_got_read_request()
 {
-	bool tmp = false;
-	tmp = read_flag;
+	bool tmp = read_flag;
 	read_flag = false;
 	return tmp;
 }
 
 bool I2cSlave::has_got_write_request()
 {
-	bool tmp = false;
-	tmp = write_flag;
+	bool tmp = write_flag;
 	write_flag = false;
 	return tmp;
 }

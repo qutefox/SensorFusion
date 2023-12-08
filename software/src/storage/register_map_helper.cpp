@@ -290,7 +290,9 @@ void RegisterMapHelper::write_magnetometer_data(const FusionVector& magnetometer
 
 void RegisterMapHelper::write_pressure_data(const sensor::pressure_t& pressure_data)
 {
-    register_map->get_pressure_data_register()->write(pressure_data.u8bit, false, false);
+    // We need to shift by 1 because the data is 3 byte long, but we store it as uint32_t which has 4 bytes.
+    // In order to pass here the last 3 relevant bytes we skip over the first byte.
+    register_map->get_pressure_data_register()->write(pressure_data.u8bit+1, false, false);
 }
 
 void RegisterMapHelper::write_temperature_data(const sensor::temperature_t& temperature_data)
@@ -317,37 +319,29 @@ bool RegisterMapHelper::is_calibration_uploading()
     return reg.status.calibration_uploading == 1;
 }
 
+void RegisterMapHelper::set_calibration_data_write_enabled(bool write_enabled)
+{
+    register_map->get_gyroscope_misalignment_register()->set_write_enabled(write_enabled);
+    register_map->get_gyroscope_sensitivity_register()->set_write_enabled(write_enabled);
+    register_map->get_gyroscope_offset_register()->set_write_enabled(write_enabled);
+
+    register_map->get_accelerometer_misalignment_register()->set_write_enabled(write_enabled);
+    register_map->get_accelerometer_sensitivity_register()->set_write_enabled(write_enabled);
+    register_map->get_accelerometer_offset_register()->set_write_enabled(write_enabled);
+
+    register_map->get_soft_iron_matrix_register()->set_write_enabled(write_enabled);
+    register_map->get_hard_iron_offset_register()->set_write_enabled(write_enabled);
+}
+
 void RegisterMapHelper::set_calibration_uploading_status(bool uploading)
 {
     if (uploading)
     {
-        register_map->get_gyroscope_misalignment_register()->set_write_enabled(true);
-        register_map->get_gyroscope_sensitivity_register()->set_write_enabled(true);
-        register_map->get_gyroscope_offset_register()->set_write_enabled(true);
-
-        register_map->get_accelerometer_misalignment_register()->set_write_enabled(true);
-        register_map->get_accelerometer_sensitivity_register()->set_write_enabled(true);
-        register_map->get_accelerometer_offset_register()->set_write_enabled(true);
-
-        register_map->get_soft_iron_matrix_register()->set_write_enabled(true);
-        register_map->get_hard_iron_offset_register()->set_write_enabled(true);
-
         register_map->get_status_register()->set_bits(STATUS_REGISTER_CALIBRATION_UPLOADING_MASK, false);
     }
     else
     {
         register_map->get_status_register()->clear_bits(STATUS_REGISTER_CALIBRATION_UPLOADING_MASK, false);
-
-        register_map->get_gyroscope_misalignment_register()->set_write_enabled(false);
-        register_map->get_gyroscope_sensitivity_register()->set_write_enabled(false);
-        register_map->get_gyroscope_offset_register()->set_write_enabled(false);
-
-        register_map->get_accelerometer_misalignment_register()->set_write_enabled(false);
-        register_map->get_accelerometer_sensitivity_register()->set_write_enabled(false);
-        register_map->get_accelerometer_offset_register()->set_write_enabled(false);
-
-        register_map->get_soft_iron_matrix_register()->set_write_enabled(false);
-        register_map->get_hard_iron_offset_register()->set_write_enabled(false);
     }
 }
 
@@ -358,5 +352,6 @@ void RegisterMapHelper::clear_control_bits()
         CONTROL_REGISTER_FUSION_STOP_MASK |
         CONTROL_REGISTER_CALIBRATION_START_MASK |
         CONTROL_REGISTER_CALIBRATION_STOP_MASK |
+        CONTROL_REGISTER_CALIBRATION_CANCEL_MASK |
         CONTROL_REGISTER_CALIBRATION_RESET_MASK, false, false);
 }

@@ -38,6 +38,7 @@ RegisterMap::RegisterMap()
             }
         };
 
+    board_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(BOARD_REGISTER_WRITE_MASK, BOARD_REGISTER_DEFAULT_VALUE);
     control_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(CONTROL_REGISTER_WRITE_MASK, CONTROL_REGISTER_DEFAULT_VALUE);
     status_register = new storage::Register<uint8_t, uint8_t>(STATUS_REGISTER_WRITE_MASK, STATUS_REGISTER_DEFAULT_VALUE);
     powermode_register = new storage::RegisterWithWriteFlag<uint8_t, uint8_t>(POWERMODE_REGISTER_WRITE_MASK, POWERMODE_REGISTER_DEFAULT_VALUE);
@@ -67,6 +68,7 @@ RegisterMap::RegisterMap()
         [this](storage::RegisterInterface<uint8_t, uint8_t>** regs, uint8_t length)
         {
             uint8_t idx = 0;
+            regs[idx++] = board_register;
             regs[idx++] = control_register;
             regs[idx++] = status_register;
             regs[idx++] = powermode_register;
@@ -190,6 +192,11 @@ RegisterMap* RegisterMap::get_instance()
 storage::MultiRegisterInterface<uint8_t, uint8_t>* RegisterMap::get_base() const
 {
     return registers;
+}
+
+storage::RegisterInterface<uint8_t, uint8_t>* RegisterMap::get_board_register() const
+{
+    return board_register;
 }
 
 storage::RegisterInterface<uint8_t, uint8_t>* RegisterMap::get_control_register() const

@@ -12,9 +12,9 @@ private:
     static CalibrationData* instance;
     static uint32_t lock;
 
+    storage::FlashInterface* flash = nullptr;
     storage::RegisterMapInterface* register_map = nullptr;
     storage::RegisterMapHelper* register_map_helper = nullptr;
-    storage::FlashInterface* flash = nullptr;
 
     bool is_magic_good();
 
@@ -31,7 +31,6 @@ public:
     void read_from_flash_to_register_map();
     void save_from_register_map_to_flash();
     void reset_register_map_calibration_data();
-    void dump_flash_content();
 
     FusionMatrix get_gyroscope_misalignment();
     FusionVector get_gyroscope_sensitivity();

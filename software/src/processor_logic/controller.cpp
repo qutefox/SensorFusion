@@ -25,8 +25,6 @@ Controller::Controller()
     register_map_helper->set_fusion_running_status(false);
     // Disable writing to calibration data registers.
     register_map_helper->set_calibration_uploading_status(false);
-
-    // calibration_data->dump_flash_content();
 }
 
 Controller::~Controller()
@@ -59,13 +57,16 @@ void Controller::handle_register_writes()
     uint8_t addr, written_bit_mask;
     while(register_map->get_base()->get_next_written_and_changed_register(addr, written_bit_mask, reg.byte))
 	{
-        debug_print("c: addr=%02X, written_bit_mask=%02X, new_value=%02X.\n", addr, written_bit_mask, reg.byte);
-        if (addr == CONTROL_REGISTER_ADDRESS)
+        // debug_print("c: addr=%02X, written_bit_mask=%02X, new_value=%02X.\n", addr, written_bit_mask, reg.byte);
+        if (addr == BOARD_REGISTER_ADDRESS)
         {
-            if (host_can_control_led && (written_bit_mask & CONTROL_REGISTER_LED_MASK))
+            if (host_can_control_led && (written_bit_mask & BOARD_REGISTER_LED_MASK))
             {
-                board->get_led_pin()->write(reg.control.led ? 1 : 0);
+                board->get_led_pin()->write(reg.board.led ? 1 : 0);
             }
+        }
+        else if (addr == CONTROL_REGISTER_ADDRESS)
+        {
             if (written_bit_mask & CONTROL_REGISTER_CALIBRATION_ACTIVE_MASK)
             {
                 fusion_data->set_use_calibration_data(reg.control.calibration_active ? true : false);
@@ -103,8 +104,8 @@ bool Controller::can_host_control_led()
 
             // Set back user value of LED.
             storage::registers::registers_u reg;
-            register_map->get_control_register()->read(reg.byte, false);
-            board->get_led_pin()->write(reg.control.led ? 1 : 0);
+            register_map->get_board_register()->read(reg.byte, false);
+            board->get_led_pin()->write(reg.board.led ? 1 : 0);
         }
         return true;
     }
@@ -115,7 +116,6 @@ void Controller::update_control(storage::registers::control_t reg)
 {
     if (reg.fusion_start)
     {
-        // fusion start request received
         bool running = false;
         if (!register_map_helper->is_calibration_uploading())
         {
@@ -126,36 +126,35 @@ void Controller::update_control(storage::registers::control_t reg)
     }
     else if (reg.fusion_stop)
     {
-        // fusion stop request received
         stop_fusion();
     }
     else if (reg.calibration_upload_start)
     {
-        // Calibration upload start request received.
         if (!register_map_helper->is_fusion_running())
         {
-            register_map_helper->set_calibration_uploading_status(true);
-        }
-        else
-        {
-            register_map_helper->set_calibration_uploading_status(false);
+            start_calibration_upload();
+
+            if (reg.calibration_reset)
+            {
+                reset_calibration_upload();
+                if (reg.calibration_upload_stop)
+                {
+                    stop_calibration_upload();
+                }
+            }
         }
     }
-    else if (reg.calibration_upload_stop)
+    else if (reg.calibration_upload_cancel && register_map_helper->is_calibration_uploading())
     {
-        // Calibration upload stop request received.
-        calibration_data->save_from_register_map_to_flash();
-        register_map_helper->set_calibration_uploading_status(false);
-        // calibration_data->dump_flash_content();
+        cancel_calibration_upload();
     }
-    else if (reg.calibration_reset)
+    else if (reg.calibration_upload_stop && register_map_helper->is_calibration_uploading())
     {
-        // Calibration reset request received.
-        if (register_map_helper->is_calibration_uploading() && !register_map_helper->is_fusion_running())
-        {
-            // We only allow resetting the calibration data when a previous upload start was sent.
-            calibration_data->reset_register_map_calibration_data();
-        }
+        stop_calibration_upload();
+    }
+    else if (reg.calibration_reset && register_map_helper->is_calibration_uploading())
+    {
+        reset_calibration_upload();
     }
     else if (reg.software_restart)
     {
@@ -163,6 +162,33 @@ void Controller::update_control(storage::registers::control_t reg)
     }
 
     register_map_helper->clear_control_bits();
+}
+
+void Controller::start_calibration_upload()
+{
+    register_map_helper->set_calibration_data_write_enabled(true); // user can write to calib data.
+    register_map_helper->set_calibration_uploading_status(true);
+}
+
+void Controller::stop_calibration_upload()
+{
+    register_map_helper->set_calibration_data_write_enabled(false); // user can no longer write to calib data.
+    calibration_data->save_from_register_map_to_flash();
+    register_map_helper->set_calibration_uploading_status(false);
+}
+
+void Controller::cancel_calibration_upload()
+{
+    register_map_helper->set_calibration_data_write_enabled(false); // user can no longer write to calib data.
+    calibration_data->read_from_flash_to_register_map();
+    register_map_helper->set_calibration_uploading_status(false);
+}
+
+void Controller::reset_calibration_upload()
+{
+    register_map_helper->set_calibration_data_write_enabled(false); // user can no longer write to calib data.
+    calibration_data->reset_register_map_calibration_data();
+    register_map_helper->set_calibration_data_write_enabled(true); // user can write to calib data.
 }
 
 void Controller::update_powermode(storage::registers::powermode_t reg)

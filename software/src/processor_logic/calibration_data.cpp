@@ -182,58 +182,6 @@ void CalibrationData::save_from_register_map_to_flash()
     flash->write(0, buffer, 172);
 }
 
-void CalibrationData::dump_flash_content()
-{
-    uint8_t buffer[172];
-    flash->read(0, buffer, 172);
-
-    // for (uint8_t i = 0 ; i < 172 ; ++i)
-    // {
-    //     debug_print("0x%02X -> 0x%02X.\n", i , buffer[i]);
-    // }
-
-    FusionMatrix matrix;
-    FusionVector vector;
-
-    matrix = get_gyroscope_misalignment();
-    debug_print("gyroscope misalignment:\n");
-    debug_print("%f, %f, %f\n", matrix.element.xx, matrix.element.xy, matrix.element.xz);
-    debug_print("%f, %f, %f\n", matrix.element.yx, matrix.element.yy, matrix.element.yz);
-    debug_print("%f, %f, %f\n", matrix.element.zx, matrix.element.zy, matrix.element.zz);
-
-    vector = get_gyroscope_sensitivity();
-    debug_print("gyroscope sensitivity:\n");
-    debug_print("%f, %f, %f\n", vector.axis.x, vector.axis.y, vector.axis.z);
-
-    vector = get_gyroscope_offset();
-    debug_print("gyroscope offset:\n");
-    debug_print("%f, %f, %f\n", vector.axis.x, vector.axis.y, vector.axis.z);
-
-    matrix = get_accelerometer_misalignment();
-    debug_print("accelerometer misalignment:\n");
-    debug_print("%f, %f, %f\n", matrix.element.xx, matrix.element.xy, matrix.element.xz);
-    debug_print("%f, %f, %f\n", matrix.element.yx, matrix.element.yy, matrix.element.yz);
-    debug_print("%f, %f, %f\n", matrix.element.zx, matrix.element.zy, matrix.element.zz);
-
-    vector = get_accelerometer_sensitivity();
-    debug_print("accelerometer sensitivity:\n");
-    debug_print("%f, %f, %f\n", vector.axis.x, vector.axis.y, vector.axis.z);
-
-    vector = get_accelerometer_offset();
-    debug_print("accelerometer offset:\n");
-    debug_print("%f, %f, %f\n", vector.axis.x, vector.axis.y, vector.axis.z);
-
-    matrix = get_soft_iron_matrix();
-    debug_print("soft iron matrix:\n");
-    debug_print("%f, %f, %f\n", matrix.element.xx, matrix.element.xy, matrix.element.xz);
-    debug_print("%f, %f, %f\n", matrix.element.yx, matrix.element.yy, matrix.element.yz);
-    debug_print("%f, %f, %f\n", matrix.element.zx, matrix.element.zy, matrix.element.zz);
-
-    vector = get_hard_iron_offset();
-    debug_print("hard iron offset:\n");
-    debug_print("%f, %f, %f\n", vector.axis.x, vector.axis.y, vector.axis.z);
-}
-
 FusionMatrix CalibrationData::get_gyroscope_misalignment()
 {
     float matrix[9];

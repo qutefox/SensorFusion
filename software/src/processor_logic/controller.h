@@ -31,6 +31,11 @@ private:
     void stop_fusion();
     void reset_fusion_state();
 
+    void start_calibration_upload();
+    void stop_calibration_upload();
+    void cancel_calibration_upload();
+    void reset_calibration_upload();
+
     void update_control(storage::registers::control_t reg);
     void update_powermode(storage::registers::powermode_t reg);
 

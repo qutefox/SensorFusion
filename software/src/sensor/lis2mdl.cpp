@@ -173,6 +173,8 @@ uint16_t Lis2mdl::get_sample_rate_in_hz(uint8_t device_index)
 int Lis2mdl::handle_interrupt()
 {
     err |= lis2mdl_magnetic_raw_get(dev_ctx, raw_mag.i16bit);
+    // The Fusion algorythm does not have any expectations regarding the unit.
+    // So we can keep it in milli gauss.
     fusion_data->update_magnetometer(
         {
             lis2mdl_from_lsb_to_mgauss(raw_mag.i16bit[0]),
@@ -181,8 +183,13 @@ int Lis2mdl::handle_interrupt()
         }
     );
 
-    err |= lis2mdl_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
-    fusion_data->update_temperature(raw_temperature);
+    int temp_err = lis2mdl_temperature_raw_get(dev_ctx, &raw_temperature.i16bit);
+    if (temp_err == E_NO_ERROR)
+    {
+        celsius = lis2mdl_from_lsb_to_celsius(raw_temperature.i16bit);
+        raw_temperature.i16bit = static_cast<int16_t>(celsius*100);
+        fusion_data->update_temperature(raw_temperature);
+    }
     
     register_map_helper->set_magnetometer_sensor_error(has_error());
     return err;

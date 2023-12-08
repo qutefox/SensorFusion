@@ -19,12 +19,12 @@ private:
 
     FusionOffset ahrs_offset;
     FusionAhrs ahrs;
-    FusionQuaternion quaternion_fqvect = {0.0f, 0.0f, 0.0f, 0.0f};
-    FusionEuler euler = {0.0f, 0.0f, 0.0f};
-    FusionVector earth = {0.0f, 0.0f, 0.0f};
-    FusionVector gyroscope_fvect = {0.0f, 0.0f, 0.0f};
-    FusionVector accelerometer_fvect = {0.0f, 0.0f, 0.0f};
-    FusionVector magnetometer_fvect = {0.0f, 0.0f, 0.0f};
+    FusionQuaternion quaternion_fqvect = FUSION_IDENTITY_QUATERNION;
+    FusionEuler euler = FUSION_EULER_ZERO;
+    FusionVector earth = FUSION_VECTOR_ZERO;
+    FusionVector gyroscope_fvect = FUSION_VECTOR_ZERO;
+    FusionVector accelerometer_fvect = FUSION_VECTOR_ZERO;
+    FusionVector magnetometer_fvect = FUSION_VECTOR_ZERO;
 
     sensor::pressure_t pressure = {0};
     sensor::temperature_t temperature = {0};
