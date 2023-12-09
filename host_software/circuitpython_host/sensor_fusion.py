@@ -183,6 +183,23 @@ class SensorErrors():
         out += f"baro error: {str(self.baro)}\n"
         return out
 
+    def to_int(self) -> int:
+        err = 0
+        if self.gyro:
+            err |= STAT_REG_GYRO_ERROR_MASK
+        if self.accel:
+            err |= STAT_REG_ACCEL_ERROR_MASK
+        if self.mag:
+            err |= STAT_REG_MAG_ERROR_MASK
+        if self.baro:
+            err |= STAT_REG_BARO_ERROR_MASK    
+        return err
+
+    def has_error(self) -> bool:
+        if self.gyro or self.accel or self.mag or self.baro:
+            return True
+        return False
+
 class Powermode:
     POWER_DOWN       = const(0x00)
     LOW_POWER        = const(0x01)

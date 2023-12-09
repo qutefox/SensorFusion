@@ -32,9 +32,15 @@ if device.is_fusion_running():
 
 # for i in range(3):
 while True:
+    err = device.get_sensor_errors()
+    if err.has_error():
+        print(f"err: {err.to_int()}")
+        
     d = device.get_all_data()
     if "quat" in d:
         print(f"quat: {d['quat'][0]}, {d['quat'][1]}, {d['quat'][2]}, {d['quat'][3]}")
+    if "euler" in d:
+        print(f"euler: {d['euler'][0]}, {d['euler'][1]}, {d['euler'][2]}")
     if "gyro" in d:
         print(f"gyro: {d['gyro'][0]}, {d['gyro'][1]}, {d['gyro'][2]}")
     if "accel" in d:
