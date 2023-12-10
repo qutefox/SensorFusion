@@ -36,7 +36,7 @@ private:
     void cancel_calibration_upload();
     void reset_calibration_upload();
 
-    void update_control(storage::registers::control_t reg);
+    void update_control2(storage::registers::control2_t reg);
     void update_powermode(storage::registers::powermode_t reg);
 
 protected:

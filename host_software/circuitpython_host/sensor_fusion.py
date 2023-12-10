@@ -3,10 +3,8 @@ import ulab.numpy as np
 from micropython import const
 from adafruit_bus_device.i2c_device import I2CDevice
 
-# FLASH_MAGIC                   = const(0xFEEDBEEF)
-
-BRD_REG_ADDR                  = const(0x00)
-CTRL_REG_ADDR                 = const(0x01)
+CTRL1_REG_ADDR                = const(0x00)
+CTRL2_REG_ADDR                = const(0x01)
 STAT_REG_ADDR                 = const(0x02)
 PM_REG_ADDR                   = const(0x03)
 DRDY_REG_ADDR                 = const(0x04)
@@ -59,16 +57,18 @@ SOFT_IRON_MATRIX_REG_LEN      = const(9*4)
 HARD_IRON_OFFSET_REG_ADDR     = const(SOFT_IRON_MATRIX_REG_ADDR + SOFT_IRON_MATRIX_REG_LEN)
 HARD_IRON_OFFSET_REG_LEN      = const(3*4)
 
-BRD_REG_LED_MASK              = const(0x01)
+CTRL1_REG_EULER_MASK           = const(0x01)
+CTRL1_REG_EARTH_MASK           = const(0x02)
+CTRL1_REG_LED_MASK             = const(0x80)
 
-CTRL_REG_FUSION_START_MASK    = const(0x01)
-CTRL_REG_FUSION_STOP_MASK     = const(0x02)
-CTRL_REG_CALIB_START_MASK     = const(0x04)
-CTRL_REG_CALIB_STOP_MASK      = const(0x08)
-CTRL_REG_CALIB_CANCEL_MASK    = const(0x10)
-CTRL_REG_CALIB_RESET_MASK     = const(0x20)
-CTRL_REG_CALIB_ACTIVE_MASK    = const(0x40)
-CTRL_REG_SW_RESTART_MASK      = const(0x80)
+CTRL2_REG_FUSION_START_MASK    = const(0x01)
+CTRL2_REG_FUSION_STOP_MASK     = const(0x02)
+CTRL2_REG_CALIB_START_MASK     = const(0x04)
+CTRL2_REG_CALIB_STOP_MASK      = const(0x08)
+CTRL2_REG_CALIB_CANCEL_MASK    = const(0x10)
+CTRL2_REG_CALIB_RESET_MASK     = const(0x20)
+CTRL2_REG_CALIB_ACTIVE_MASK    = const(0x40)
+CTRL2_REG_SW_RESTART_MASK      = const(0x80)
 
 STAT_REG_FUSION_RUNNING_MASK  = const(0x01)
 STAT_REG_CALIB_UPLOADING_MASK = const(0x02)
@@ -377,12 +377,24 @@ class SensorFusion:
 
     def set_led(self, value):
         if value:
-            self._write_bit_set(BRD_REG_ADDR, BRD_REG_LED_MASK)
+            self._write_bit_set(CTRL1_REG_ADDR, CTRL1_REG_LED_MASK)
         else:
-            self._write_bit_clear(BRD_REG_ADDR, BRD_REG_LED_MASK)
+            self._write_bit_clear(CTRL1_REG_ADDR, CTRL1_REG_LED_MASK)
+
+    def enable_euler_output(self, enable):
+        if enable:
+            self._write_bit_set(CTRL1_REG_ADDR, CTRL1_REG_EULER_MASK)
+        else:
+            self._write_bit_clear(CTRL1_REG_ADDR, CTRL1_REG_EULER_MASK)
+
+    def enable_earth_output(self, enable):
+        if enable:
+            self._write_bit_set(CTRL1_REG_ADDR, CTRL1_REG_EARTH_MASK)
+        else:
+            self._write_bit_clear(CTRL1_REG_ADDR, CTRL1_REG_EARTH_MASK)
 
     def software_reset(self):
-        self._write_bit_set(CTRL_REG_ADDR, CTRL_REG_SW_RESTART_MASK)
+        self._write_bit_set(CTRL2_REG_ADDR, CTRL2_REG_SW_RESTART_MASK)
         time.sleep(0.5)
 
     def is_calibration_uploading(self) -> bool:
@@ -392,8 +404,8 @@ class SensorFusion:
         return False
 
     def cancel_calibration_upload(self):
-        self._write_bit_set(CTRL_REG_ADDR, CTRL_REG_CALIB_CANCEL_MASK)
-        return self._wait_until_bit_cleared(CTRL_REG_ADDR, CTRL_REG_CALIB_CANCEL_MASK)
+        self._write_bit_set(CTRL2_REG_ADDR, CTRL2_REG_CALIB_CANCEL_MASK)
+        return self._wait_until_bit_cleared(CTRL2_REG_ADDR, CTRL2_REG_CALIB_CANCEL_MASK)
 
     def get_gyro_calibration_data(self) -> InertialCalibrationData:
         gyro_calibration_data = InertialCalibrationData()
@@ -479,20 +491,20 @@ class SensorFusion:
     def start_calibration_upload(self) -> bool:
         if self.is_fusion_running():
             return False
-        self._write_bit_set(CTRL_REG_ADDR, CTRL_REG_CALIB_START_MASK)
-        return self._wait_until_bit_cleared(CTRL_REG_ADDR, CTRL_REG_CALIB_START_MASK)
+        self._write_bit_set(CTRL2_REG_ADDR, CTRL2_REG_CALIB_START_MASK)
+        return self._wait_until_bit_cleared(CTRL2_REG_ADDR, CTRL2_REG_CALIB_START_MASK)
 
     def stop_calibration_upload(self) -> bool:
-        self._write_bit_set(CTRL_REG_ADDR, CTRL_REG_CALIB_STOP_MASK)
+        self._write_bit_set(CTRL2_REG_ADDR, CTRL2_REG_CALIB_STOP_MASK)
         time.sleep(0.1) # writing flash disables i2c slave interrupts for a short period of time.
-        return self._wait_until_bit_cleared(CTRL_REG_ADDR, CTRL_REG_CALIB_STOP_MASK)
+        return self._wait_until_bit_cleared(CTRL2_REG_ADDR, CTRL2_REG_CALIB_STOP_MASK)
 
     def reset_calibration_data(self) -> bool:
         success = self.start_calibration_upload()
         if not success:
             return False
-        self._write_bit_set(CTRL_REG_ADDR, CTRL_REG_CALIB_RESET_MASK)
-        reset_success = self._wait_until_bit_cleared(CTRL_REG_ADDR, CTRL_REG_CALIB_RESET_MASK)
+        self._write_bit_set(CTRL2_REG_ADDR, CTRL2_REG_CALIB_RESET_MASK)
+        reset_success = self._wait_until_bit_cleared(CTRL2_REG_ADDR, CTRL2_REG_CALIB_RESET_MASK)
         success = self.stop_calibration_upload()
         if not success:
             return False
@@ -501,8 +513,8 @@ class SensorFusion:
     def start_fusion(self) -> bool:
         if self.is_calibration_uploading():
             return False
-        self._write_bit_set(CTRL_REG_ADDR, CTRL_REG_FUSION_START_MASK)
-        return self._wait_until_bit_cleared(CTRL_REG_ADDR, CTRL_REG_FUSION_START_MASK)
+        self._write_bit_set(CTRL2_REG_ADDR, CTRL2_REG_FUSION_START_MASK)
+        return self._wait_until_bit_cleared(CTRL2_REG_ADDR, CTRL2_REG_FUSION_START_MASK)
 
     def is_fusion_running(self) -> bool:
         reg_value = self._read_register(STAT_REG_ADDR)
@@ -511,8 +523,8 @@ class SensorFusion:
         return False
 
     def stop_fusion(self) -> bool:
-        self._write_bit_set(CTRL_REG_ADDR, CTRL_REG_FUSION_STOP_MASK)
-        return self._wait_until_bit_cleared(CTRL_REG_ADDR, CTRL_REG_FUSION_STOP_MASK)
+        self._write_bit_set(CTRL2_REG_ADDR, CTRL2_REG_FUSION_STOP_MASK)
+        return self._wait_until_bit_cleared(CTRL2_REG_ADDR, CTRL2_REG_FUSION_STOP_MASK)
 
 
     def is_gyro_sensor_in_error(self) -> bool:
@@ -622,6 +634,39 @@ class SensorFusion:
             self.device.write_then_readinto(buff, buff, out_end=1, in_start=1)
             temp_int = int.from_bytes(buff[1:], "little")
             return temp_int / 100.0
+
+    def get_quat_data_if_available(self) -> np.ndarray:
+        with self.device:
+            buff = bytearray(1+1+16)
+            buff[0] = DRDY_REG_ADDR # 1 byte
+            self.device.write_then_readinto(buff, buff, out_end=1, in_start=1)
+            drdy = SensorDataReady()
+            drdy.parse_from_int(buff[1]) # 1 byte
+            if drdy.quat:
+                return np.frombuffer(buff[2:18], dtype=np.float)
+        return None
+
+    def get_euler_data_if_available(self) -> np.ndarray:
+        with self.device:
+            buff = bytearray(1+1+16+12)
+            buff[0] = DRDY_REG_ADDR # 1 byte
+            self.device.write_then_readinto(buff, buff, out_end=1, in_start=1)
+            drdy = SensorDataReady()
+            drdy.parse_from_int(buff[1]) # 1 byte
+            if drdy.euler:
+                return np.frombuffer(buff[18:30], dtype=np.float)
+        return None
+
+    def get_earth_data_if_available(self) -> np.ndarray:
+        with self.device:
+            buff = bytearray(1+1+16+12+12)
+            buff[0] = DRDY_REG_ADDR # 1 byte
+            self.device.write_then_readinto(buff, buff, out_end=1, in_start=1)
+            drdy = SensorDataReady()
+            drdy.parse_from_int(buff[1]) # 1 byte
+            if drdy.earth:
+                return np.frombuffer(buff[30:42], dtype=np.float)
+        return None
 
     def get_all_data(self):
         with self.device:

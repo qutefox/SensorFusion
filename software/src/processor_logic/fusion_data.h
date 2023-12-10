@@ -40,6 +40,8 @@ private:
     bool has_new_accelerometer_data = false;
     bool has_new_magnetometer_data = false;
     bool use_calibration_data = true;
+    bool euler_output_enabled = false;
+    bool earth_output_enabled = false;
 
     FusionMatrix gyroscope_misalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
     FusionVector gyroscope_sensitivity = {1.0f, 1.0f, 1.0f};
@@ -67,6 +69,8 @@ public:
     virtual void update_register_map() override;
     virtual void set_use_calibration_data(bool use_calibration_data) override;
     virtual void update_calibration_data() override;
+    virtual void set_euler_output_enable(bool enable) override;
+    virtual void set_earth_output_enable(bool enable) override;
 
     virtual void update_gyroscope(const FusionVector& gyroscope_data) override;
     virtual void update_accelerometer(const FusionVector& accelerometer_data) override;

@@ -25,12 +25,17 @@ if device.is_calibration_uploading():
 
 time.sleep(1)
 
+device.enable_euler_output(True)
+pm = device.get_sensor_powermodes()
+pm.gyro = Powermode(Powermode.HIGH_PERFORMANCE) # Powermode.NORMAL
+pm.accel = Powermode(Powermode.HIGH_PERFORMANCE)
+pm.mag = Powermode(Powermode.HIGH_PERFORMANCE)
+device.set_sensor_powermodes(pm)
 device.start_fusion()
 
 if device.is_fusion_running():
     device.set_led(True)
 
-# for i in range(3):
 while True:
     err = device.get_sensor_errors()
     if err.has_error():
@@ -47,7 +52,10 @@ while True:
         print(f"accel: {d['accel'][0]}, {d['accel'][1]}, {d['accel'][2]}")
     if "mag" in d:
         print(f"mag: {d['mag'][0]}, {d['mag'][1]}, {d['mag'][2]}")
-
+    if "baro" in d:
+        print(f"baro: {d['baro']}")
+    if "temp" in d:
+        print(f"temp: {d['temp']}")
 
     # print(f"powermodes: {device.get_sensor_powermodes()}")
     # print(f"drdy: {device.get_sensor_data_ready()}")
@@ -60,6 +68,7 @@ while True:
     # print(f"mag: {device.get_mag_data()}")
     # print(f"pressure: {device.get_pressure_data_hpa()}")
     # print(f"temperature: {device.get_temperature_data()}")
+
 device.stop_fusion()
 print("all done")
 time.sleep(1)

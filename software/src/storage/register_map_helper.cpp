@@ -8,8 +8,8 @@ using namespace storage;
 RegisterMapHelper* RegisterMapHelper::instance = nullptr;
 uint32_t RegisterMapHelper::lock = 0;
 
-RegisterMapHelper::RegisterMapHelper(RegisterMapInterface* _register_map)
-    : register_map{ _register_map }
+RegisterMapHelper::RegisterMapHelper(RegisterMapInterface* register_map_interface)
+    : register_map{ register_map_interface }
 {
     
 }
@@ -347,11 +347,11 @@ void RegisterMapHelper::set_calibration_uploading_status(bool uploading)
 
 void RegisterMapHelper::clear_control_bits()
 {
-    register_map->get_control_register()->clear_bits(
-        CONTROL_REGISTER_FUSION_START_MASK |
-        CONTROL_REGISTER_FUSION_STOP_MASK |
-        CONTROL_REGISTER_CALIBRATION_START_MASK |
-        CONTROL_REGISTER_CALIBRATION_STOP_MASK |
-        CONTROL_REGISTER_CALIBRATION_CANCEL_MASK |
-        CONTROL_REGISTER_CALIBRATION_RESET_MASK, false, false);
+    register_map->get_control2_register()->clear_bits(
+        CONTROL2_REGISTER_FUSION_START_MASK |
+        CONTROL2_REGISTER_FUSION_STOP_MASK |
+        CONTROL2_REGISTER_CALIBRATION_START_MASK |
+        CONTROL2_REGISTER_CALIBRATION_STOP_MASK |
+        CONTROL2_REGISTER_CALIBRATION_CANCEL_MASK |
+        CONTROL2_REGISTER_CALIBRATION_RESET_MASK, false, false);
 }

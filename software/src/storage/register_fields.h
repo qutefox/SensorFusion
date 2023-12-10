@@ -25,28 +25,32 @@ typedef union
     uint8_t bytes[4];
 } float_u;
 
-#define BOARD_REGISTER_ADDRESS        0x00
-#define BOARD_REGISTER_WRITE_MASK     0x01
-#define BOARD_REGISTER_DEFAULT_VALUE  0x00
-#define BOARD_REGISTER_LED_MASK       0x01
+#define CONTROL1_REGISTER_ADDRESS        0x00
+#define CONTROL1_REGISTER_WRITE_MASK     0x83
+#define CONTROL1_REGISTER_DEFAULT_VALUE  0x00
+#define CONTROL1_REGISTER_EULER_MASK     0x01
+#define CONTROL1_REGISTER_EARTH_MASK     0x02
+#define CONTROL1_REGISTER_LED_MASK       0x80
 
 typedef struct
 {
-    uint8_t led : 1;
-    uint8_t     : 7;
-} board_t;
+    uint8_t euler : 1;
+    uint8_t earth : 1;
+    uint8_t       : 5;
+    uint8_t led   : 1;
+} control1_t;
 
-#define CONTROL_REGISTER_ADDRESS                 0x01
-#define CONTROL_REGISTER_WRITE_MASK              0xFF
-#define CONTROL_REGISTER_DEFAULT_VALUE           0x20
-#define CONTROL_REGISTER_FUSION_START_MASK       0x01
-#define CONTROL_REGISTER_FUSION_STOP_MASK        0x02
-#define CONTROL_REGISTER_CALIBRATION_START_MASK  0x04
-#define CONTROL_REGISTER_CALIBRATION_STOP_MASK   0x08
-#define CONTROL_REGISTER_CALIBRATION_CANCEL_MASK 0x10
-#define CONTROL_REGISTER_CALIBRATION_RESET_MASK  0x20
-#define CONTROL_REGISTER_CALIBRATION_ACTIVE_MASK 0x40
-#define CONTROL_REGISTER_SOFTWARE_RESTART_MASK   0x80
+#define CONTROL2_REGISTER_ADDRESS                 0x01
+#define CONTROL2_REGISTER_WRITE_MASK              0xFF
+#define CONTROL2_REGISTER_DEFAULT_VALUE           0x20
+#define CONTROL2_REGISTER_FUSION_START_MASK       0x01
+#define CONTROL2_REGISTER_FUSION_STOP_MASK        0x02
+#define CONTROL2_REGISTER_CALIBRATION_START_MASK  0x04
+#define CONTROL2_REGISTER_CALIBRATION_STOP_MASK   0x08
+#define CONTROL2_REGISTER_CALIBRATION_CANCEL_MASK 0x10
+#define CONTROL2_REGISTER_CALIBRATION_RESET_MASK  0x20
+#define CONTROL2_REGISTER_CALIBRATION_ACTIVE_MASK 0x40
+#define CONTROL2_REGISTER_SOFTWARE_RESTART_MASK   0x80
 
 typedef struct
 {
@@ -58,7 +62,7 @@ typedef struct
     uint8_t calibration_reset         : 1;
     uint8_t calibration_active        : 1;
     uint8_t software_restart          : 1;
-} control_t;
+} control2_t;
 
 #define STATUS_REGISTER_ADDRESS                    0x02
 #define STATUS_REGISTER_WRITE_MASK                 0x00
@@ -174,8 +178,8 @@ typedef struct
 
 typedef union
 {
-    board_t      board;
-    control_t    control;
+    control1_t   control1;
+    control2_t   control2;
     status_t     status;
     powermode_t  powermode;
     data_ready_t data_ready;

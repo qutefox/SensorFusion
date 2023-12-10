@@ -139,7 +139,7 @@ class Window():
 		self.serial = SerialReaderThread()
 		self.serial.start()
 
-		glut.glutTimerFunc(10, self.timer_event, 1)
+		glut.glutTimerFunc(25, self.timer_event, 1)
 
 		glut.glutMainLoop()
 
@@ -152,16 +152,16 @@ class Window():
 
 	def timer_event(self, value):
 		glut.glutPostRedisplay()
-		glut.glutTimerFunc(10, self.timer_event, 1)
+		glut.glutTimerFunc(25, self.timer_event, 1)
 
 	def make_font(self, filename, size):
-		 # Load font  and check it is monotype
+		# Load font  and check it is monotype
 		face = Face(filename)
 		face.set_char_size( size*64 )
 		if not face.is_fixed_width:
 			raise 'Font is not monotype'
 
-		 # Determine largest glyph size
+		# Determine largest glyph size
 		width, height, ascender, descender = 0, 0, 0, 0
 		for c in range(32,128):
 			face.load_char(chr(c), FT_LOAD_RENDER | FT_LOAD_FORCE_AUTOHINT)
@@ -217,10 +217,10 @@ class Window():
 		gl.glEnable(gl.GL_BLEND)
 		gl.glBindTexture(gl.GL_TEXTURE_2D, self.texid)
 		gl.glColor(1,1,1,1) # white
-		gl.glPushMatrix( )
+		gl.glPushMatrix()
 		gl.glTranslate(x, y, -5)
 		gl.glPushMatrix()
-		gl.glScalef(0.0035, 0.0035, 0.0035)
+		gl.glScalef(0.003, 0.003, 0.003)
 		gl.glListBase(self.base)
 		gl.glCallLists([ord(c) for c in text])
 		gl.glPopMatrix()
@@ -259,9 +259,9 @@ class Window():
 		self.draw_cube_surfaces()
 
 		gl.glLoadIdentity()
-		self.draw_text(f"Quat: {q.w:.3f}, {q.nx:.3f}, {q.ny:.3f}, {q.nz:.3f}", -2.5, -1.2)
+		self.draw_text(f"Quat: {q.w:.3f}, {q.nx:.3f}, {q.ny:.3f}, {q.nz:.3f}", -2, -1.4)
 		euler = self.serial.euler
-		self.draw_text(f"Roll: {euler.roll:.1f}, Pitch: {euler.pitch:.1f}, Yaw: {euler.yaw:.1f}", -2.5, -1.5)
+		self.draw_text(f"Roll: {euler.roll:.1f}, Pitch: {euler.pitch:.1f}, Yaw: {euler.yaw:.1f}", -2, -1.65)
 
 		glut.glutSwapBuffers()
 
@@ -288,4 +288,4 @@ class Window():
 			self.window = None
 
 if __name__ == '__main__':
-	window = Window(640, 480, "Quat visualization")
+	window = Window(800, 600, "Quat visualization")

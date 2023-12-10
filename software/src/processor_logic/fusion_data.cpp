@@ -33,21 +33,35 @@ FusionData::FusionData()
     , has_new_accelerometer_data{ false }
     , has_new_magnetometer_data{ false }
     , use_calibration_data{ false }
+    , euler_output_enabled{ false }
+    , earth_output_enabled{ false }
 {
     FusionAhrsInitialise(&ahrs);
 
-    if (CONTROL_REGISTER_DEFAULT_VALUE & CONTROL_REGISTER_CALIBRATION_ACTIVE_MASK)
+    if (CONTROL1_REGISTER_DEFAULT_VALUE & CONTROL1_REGISTER_EULER_MASK)
+    {
+        euler_output_enabled = true;
+    }
+
+    if (CONTROL1_REGISTER_DEFAULT_VALUE & CONTROL1_REGISTER_EARTH_MASK)
+    {
+        earth_output_enabled = true;
+    }
+
+    if (CONTROL2_REGISTER_DEFAULT_VALUE & CONTROL2_REGISTER_CALIBRATION_ACTIVE_MASK)
     {
         use_calibration_data = true;
     }
 
     update_calibration_data();
 
-    // Cannot call reset here, because the SensorBase class constucts the fusion data
-    // before the SensorFusionBoard class does. We use the board class to get the sensor pointer
-    // to read the data rate (board->inertial_sensor->get_data_rate()). At this point the sensor
-    // pointers are not initialised and this causes a nullpointer exception.
-    // The Controller class wil call reset when starting the fusion.
+    // Cannot call reset here, because the SensorBase class constructs the fusion data (this class)
+    // before the SensorFusionBoard class does.
+    // Meaning that the board pointer is nullptr here and now.
+    // Inside the reset() function we use the board class to get the sensor pointer
+    // to read the data rate (board->inertial_sensor->get_data_rate()).
+    // This causes a nullpointer exception.
+    // The Controller class will call reset when starting the fusion.
     // reset();
 }
 
@@ -224,9 +238,31 @@ void FusionData::update_register_map()
     }
 }
 
-void FusionData::set_use_calibration_data(bool _use_calibration_data)
+void FusionData::set_use_calibration_data(bool use)
 {
-    use_calibration_data = _use_calibration_data;
+    use_calibration_data = use;
+}
+
+void FusionData::set_euler_output_enable(bool enable)
+{
+    if (!enable)
+    {
+        register_map_helper->set_euler_data_ready_flag(false);
+        has_new_euler_data = false;
+        euler = FUSION_EULER_ZERO;
+    }
+    euler_output_enabled = enable;
+}
+
+void FusionData::set_earth_output_enable(bool enable)
+{
+    if (!enable)
+    {
+        register_map_helper->set_earth_data_ready_flag(false);
+        has_new_earth_data = false;
+        earth = FUSION_VECTOR_ZERO;
+    }
+    earth_output_enabled = enable;
 }
 
 void FusionData::update_calibration_data()
@@ -252,11 +288,18 @@ void FusionData::update_fusion()
     
     quaternion_fqvect = FusionAhrsGetQuaternion(&ahrs);
     has_new_quaternion_data = true;
-    euler =  FusionQuaternionToEuler(quaternion_fqvect);
-    // debug_print("roll %f, pitch %f, yaw: %f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
-    has_new_euler_data = true;
-    earth = FusionAhrsGetEarthAcceleration(&ahrs);
-    has_new_earth_data = true;
+
+    if (euler_output_enabled)
+    {
+        euler =  FusionQuaternionToEuler(quaternion_fqvect);
+        has_new_euler_data = true;
+    }
+
+    if (earth_output_enabled)
+    {
+        earth = FusionAhrsGetEarthAcceleration(&ahrs);
+        has_new_earth_data = true;
+    }
 }
 
 void FusionData::update_gyroscope(const FusionVector& gyroscope_data)

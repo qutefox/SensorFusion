@@ -58,20 +58,28 @@ void Controller::handle_register_writes()
     while(register_map->get_base()->get_next_written_and_changed_register(addr, written_bit_mask, reg.byte))
 	{
         // debug_print("c: addr=%02X, written_bit_mask=%02X, new_value=%02X.\n", addr, written_bit_mask, reg.byte);
-        if (addr == BOARD_REGISTER_ADDRESS)
+        if (addr == CONTROL1_REGISTER_ADDRESS)
         {
-            if (host_can_control_led && (written_bit_mask & BOARD_REGISTER_LED_MASK))
+            if (host_can_control_led && (written_bit_mask & CONTROL1_REGISTER_LED_MASK))
             {
-                board->get_led_pin()->write(reg.board.led ? 1 : 0);
+                board->get_led_pin()->write(reg.control1.led ? 1 : 0);
+            }
+            if (written_bit_mask & CONTROL1_REGISTER_EULER_MASK)
+            {
+                fusion_data->set_euler_output_enable(reg.control1.euler == 1);
+            }
+            if (written_bit_mask & CONTROL1_REGISTER_EARTH_MASK)
+            {
+                fusion_data->set_earth_output_enable(reg.control1.earth == 1);
             }
         }
-        else if (addr == CONTROL_REGISTER_ADDRESS)
+        else if (addr == CONTROL2_REGISTER_ADDRESS)
         {
-            if (written_bit_mask & CONTROL_REGISTER_CALIBRATION_ACTIVE_MASK)
+            if (written_bit_mask & CONTROL2_REGISTER_CALIBRATION_ACTIVE_MASK)
             {
-                fusion_data->set_use_calibration_data(reg.control.calibration_active ? true : false);
+                fusion_data->set_use_calibration_data(reg.control2.calibration_active ? true : false);
             }
-            update_control(reg.control);
+            update_control2(reg.control2);
         }
         else if (addr == POWERMODE_REGISTER_ADDRESS)
         {
@@ -104,45 +112,29 @@ bool Controller::can_host_control_led()
 
             // Set back user value of LED.
             storage::registers::registers_u reg;
-            register_map->get_board_register()->read(reg.byte, false);
-            board->get_led_pin()->write(reg.board.led ? 1 : 0);
+            register_map->get_control1_register()->read(reg.byte, false);
+            board->get_led_pin()->write(reg.control1.led ? 1 : 0);
         }
         return true;
     }
     return false;
 }
 
-void Controller::update_control(storage::registers::control_t reg)
+void Controller::update_control2(storage::registers::control2_t reg)
 {
-    if (reg.fusion_start)
+    if (reg.fusion_start && !register_map_helper->is_calibration_uploading())
     {
-        bool running = false;
-        if (!register_map_helper->is_calibration_uploading())
-        {
-            running = start_fusion();
-        }
+        bool running = start_fusion();
         register_map_helper->set_fusion_running_status(running);
         if (!running) stop_fusion();
     }
-    else if (reg.fusion_stop)
+    else if (reg.fusion_stop && register_map_helper->is_fusion_running())
     {
         stop_fusion();
     }
-    else if (reg.calibration_upload_start)
+    else if (reg.calibration_upload_start && !register_map_helper->is_fusion_running())
     {
-        if (!register_map_helper->is_fusion_running())
-        {
-            start_calibration_upload();
-
-            if (reg.calibration_reset)
-            {
-                reset_calibration_upload();
-                if (reg.calibration_upload_stop)
-                {
-                    stop_calibration_upload();
-                }
-            }
-        }
+        start_calibration_upload();
     }
     else if (reg.calibration_upload_cancel && register_map_helper->is_calibration_uploading())
     {

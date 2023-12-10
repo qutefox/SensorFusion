@@ -13,8 +13,8 @@ private:
 
     storage::MultiRegisterInterface<uint8_t, uint8_t>* registers = nullptr;
 
-    storage::RegisterInterface<uint8_t, uint8_t>* board_register = nullptr;
-    storage::RegisterInterface<uint8_t, uint8_t>* control_register = nullptr;
+    storage::RegisterInterface<uint8_t, uint8_t>* control1_register = nullptr;
+    storage::RegisterInterface<uint8_t, uint8_t>* control2_register = nullptr;
     storage::RegisterInterface<uint8_t, uint8_t>* status_register = nullptr;
     storage::RegisterInterface<uint8_t, uint8_t>* powermode_register = nullptr;
     storage::RegisterInterface<uint8_t, uint8_t>* data_ready_register = nullptr;
@@ -52,8 +52,8 @@ public:
 public:
     virtual storage::MultiRegisterInterface<uint8_t, uint8_t>* get_base() const override;
     
-    virtual storage::RegisterInterface<uint8_t, uint8_t>* get_board_register() const override;
-    virtual storage::RegisterInterface<uint8_t, uint8_t>* get_control_register() const override;
+    virtual storage::RegisterInterface<uint8_t, uint8_t>* get_control1_register() const override;
+    virtual storage::RegisterInterface<uint8_t, uint8_t>* get_control2_register() const override;
     virtual storage::RegisterInterface<uint8_t, uint8_t>* get_status_register() const override;
     virtual storage::RegisterInterface<uint8_t, uint8_t>* get_powermode_register() const override;
     virtual storage::RegisterInterface<uint8_t, uint8_t>* get_data_ready_register() const override;

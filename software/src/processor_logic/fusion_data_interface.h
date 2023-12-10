@@ -13,6 +13,8 @@ public:
     virtual void update_register_map() = 0;
     virtual void update_calibration_data() = 0;
     virtual void set_use_calibration_data(bool use_calibration_data) = 0;
+    virtual void set_euler_output_enable(bool enable) = 0;
+    virtual void set_earth_output_enable(bool enable) = 0;
 
     virtual void update_gyroscope(const FusionVector& gyroscope_data) = 0;
     virtual void update_accelerometer(const FusionVector& accelerometer_data) = 0;

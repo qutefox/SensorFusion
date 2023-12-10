@@ -15,8 +15,8 @@ public:
 
     virtual storage::MultiRegisterInterface<uint8_t, uint8_t>* get_base() const = 0;
 
-    virtual storage::RegisterInterface<uint8_t, uint8_t>* get_board_register() const = 0;
-    virtual storage::RegisterInterface<uint8_t, uint8_t>* get_control_register() const = 0;
+    virtual storage::RegisterInterface<uint8_t, uint8_t>* get_control1_register() const = 0;
+    virtual storage::RegisterInterface<uint8_t, uint8_t>* get_control2_register() const = 0;
     virtual storage::RegisterInterface<uint8_t, uint8_t>* get_status_register() const = 0;
     virtual storage::RegisterInterface<uint8_t, uint8_t>* get_powermode_register() const = 0;
     virtual storage::RegisterInterface<uint8_t, uint8_t>* get_data_ready_register() const = 0;
