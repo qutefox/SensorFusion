@@ -143,8 +143,13 @@ int Lis2mdl::set_power_mode(uint8_t device_index, PowerMode power_mode)
 
     if (power_mode != PowerMode::POWER_DOWN)
     {
-        // Handle any available data so we can get the next interrupt.
-        handle_interrupt();
+        uint8_t drdy = 0;
+        lis2mdl_mag_data_ready_get(dev_ctx, &drdy);
+        if (drdy)
+        {
+            // Handle any available data so we can get the next interrupt.
+            handle_interrupt();
+        }
     }
 
     return err;

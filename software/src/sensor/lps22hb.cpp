@@ -146,8 +146,14 @@ int Lps22hb::set_power_mode(uint8_t device_index, PowerMode power_mode)
 
     if (power_mode != PowerMode::POWER_DOWN)
     {
-        // Handle any available data so we can get the next interrupt.
-        handle_interrupt();
+        uint8_t press_drdy = 0;
+        uint8_t temp_drdy = 0;
+        lps22hb_data_ready_get(dev_ctx, &press_drdy, &temp_drdy);
+        if (press_drdy || temp_drdy)
+        {
+            // Handle any available data so we can get the next interrupt.
+            handle_interrupt();
+        }
     }
 
     return err;

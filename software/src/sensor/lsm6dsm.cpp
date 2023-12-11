@@ -236,12 +236,12 @@ int Lsm6dsm::set_power_mode(uint8_t device_index, PowerMode power_mode)
         // High performance for odrs: 416Hz, 833Hz, 1.66KHz, 3.33KHz and 6.66KHz.
         if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_GYRO)
         {
-            err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_833Hz);
+            err1 |= lsm6dsm_gy_data_rate_set(dev_ctx, LSM6DSM_GY_ODR_416Hz);
             err1 |= lsm6dsm_gy_power_mode_set(dev_ctx, LSM6DSM_GY_HIGH_PERFORMANCE);
         }
         else if (device_index == Lsm6dsmDevice::LSM6DSM_DEVICE_ACCEL)
         {
-            err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_833Hz);
+            err2 |= lsm6dsm_xl_data_rate_set(dev_ctx, LSM6DSM_XL_ODR_416Hz);
             err2 |= lsm6dsm_xl_power_mode_set(dev_ctx, LSM6DSM_XL_HIGH_PERFORMANCE);
         }
         break;
@@ -253,9 +253,15 @@ int Lsm6dsm::set_power_mode(uint8_t device_index, PowerMode power_mode)
         register_map_helper->set_gyroscope_sensor_error(gyroscope_err);
         if (power_mode != PowerMode::POWER_DOWN)
         {
-            // Handle any available data so we can get the next interrupt.
-            handle_interrupt1();
-            handle_interrupt2();
+            uint8_t gy_drdy = 0;
+            uint8_t xl_drdy = 0;
+            lsm6dsm_data_ready_get(dev_ctx, &gy_drdy, &xl_drdy);
+            if (gy_drdy || xl_drdy)
+            {
+                // Handle any available data so we can get the next interrupt.
+                handle_interrupt1();
+                handle_interrupt2();
+            }
         }
         return gyroscope_err;
     }
@@ -265,9 +271,15 @@ int Lsm6dsm::set_power_mode(uint8_t device_index, PowerMode power_mode)
         register_map_helper->set_accelerometer_sensor_error(accelerometer_err);
         if (power_mode != PowerMode::POWER_DOWN)
         {
-            // Handle any available data so we can get the next interrupt.
-            handle_interrupt1();
-            handle_interrupt2();
+            uint8_t gy_drdy = 0;
+            uint8_t xl_drdy = 0;
+            lsm6dsm_data_ready_get(dev_ctx, &gy_drdy, &xl_drdy);
+            if (gy_drdy || xl_drdy)
+            {
+                // Handle any available data so we can get the next interrupt.
+                handle_interrupt1();
+                handle_interrupt2();
+            }
         }
         return accelerometer_err;
     }

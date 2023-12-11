@@ -282,7 +282,6 @@ void FusionData::update_calibration_data()
 void FusionData::update_fusion()
 {
     // This method should be called repeatedly each time new gyroscope data is available.
-
     // Update gyroscope AHRS algorithm.
     FusionAhrsUpdate(&ahrs, gyroscope_fvect, accelerometer_fvect, magnetometer_fvect, get_time_delta_in_seconds());
     

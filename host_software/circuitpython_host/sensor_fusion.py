@@ -248,10 +248,10 @@ class SensorPowermodes:
     def to_int(self) -> int:
         self._check_and_adjust()
         out = 0
-        out = out | (self.gyro.value & 0x03)
-        out = out | ((self.accel.value << 2) & 0x03)
-        out = out | ((self.mag.value << 4) & 0x03)
-        out = out | ((self.baro.value << 6) & 0x03)
+        out |= (self.gyro.value & 0x03)
+        out |= ((self.accel.value & 0x03) << 2)
+        out |= ((self.mag.value & 0x03) << 4)
+        out |= ((self.baro.value & 0x03) << 6)
         return out
 
     def __str__(self):
@@ -312,6 +312,26 @@ class SensorDataReady:
             self.temp  = True
         else:
             self.temp  = False
+
+    def to_int(self) -> int:
+        out = 0
+        if self.quat:
+            out |= DRDY_REG_QUAT_MASK
+        if self.euler:
+            out |= DRDY_REG_EULER_MASK
+        if self.earth:
+            out |= DRDY_REG_EARTH_MASK
+        if self.gyro:
+            out |= DRDY_REG_GYRO_MASK
+        if self.accel:
+            out |= DRDY_REG_ACCEL_MASK
+        if self.mag:
+            out |= DRDY_REG_MAG_MASK
+        if self.baro:
+            out |= DRDY_REG_BARO_MASK
+        if self.temp:
+            out |= DRDY_REG_TEMP_MASK
+        return out
 
     def __str__(self):
         out =  f"quat drdy: {str(self.quat)}\n"

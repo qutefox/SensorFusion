@@ -27,10 +27,18 @@ time.sleep(1)
 
 device.enable_euler_output(True)
 pm = device.get_sensor_powermodes()
-pm.gyro = Powermode(Powermode.HIGH_PERFORMANCE) # Powermode.NORMAL
-pm.accel = Powermode(Powermode.HIGH_PERFORMANCE)
-pm.mag = Powermode(Powermode.HIGH_PERFORMANCE)
+# Powermode.NORMAL
+# Powermode.HIGH_PERFORMANCE
+pm.gyro = Powermode.NORMAL
+pm.accel = Powermode.NORMAL
+pm.mag = Powermode.NORMAL
 device.set_sensor_powermodes(pm)
+pm = device.get_sensor_powermodes()
+
+print(pm)
+
+time.sleep(5)
+
 device.start_fusion()
 
 if device.is_fusion_running():
@@ -41,7 +49,10 @@ while True:
     if err.has_error():
         print(f"err: {err.to_int()}")
         
+    device.set_led(False)
     d = device.get_all_data()
+    # if "drdy" in d:
+    #     print(f"drdy: {d["drdy"]}")
     if "quat" in d:
         print(f"quat: {d['quat'][0]}, {d['quat'][1]}, {d['quat'][2]}, {d['quat'][3]}")
     if "euler" in d:
