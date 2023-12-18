@@ -12,5 +12,5 @@ Connect your host board to the windows PC via serial (in my case I use the built
 
 I used Unexpected Maker's PROS3 board (ESP32-S3):
 
-<img src="../img/demo_wiring.png" alt="Demo wiring" width="auto" height="400">
-<img src="../img/demo.png" alt="Demo" width="auto" height="400">
+<img src="../img/demo_wiring.png" alt="Demo wiring" width="auto" height="400" style="object-fit:cover;">
+<img src="../img/demo.png" alt="Demo" width="auto" height="400" style="object-fit:cover;">

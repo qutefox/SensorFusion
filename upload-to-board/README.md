@@ -12,11 +12,11 @@
 
 Programmer | Serial to USB 
 --- | ---
-<img src="../img/programmer.jpg" alt="Programmer" width="auto" height="400"> | <img src="../img/serial_to_usb.jpg" alt="Serial to USB" width="auto" height="400">
+<img src="../img/programmer.jpg" alt="Programmer" width="auto" height="400" style="object-fit:cover;"> | <img src="../img/serial_to_usb.jpg" alt="Serial to USB" width="auto" height="400" style="object-fit:cover;">
 
 Top | Side | Bottom
 --- | --- | ---
-<img src="../img/board_top.jpg" alt="Board top" width="auto" height="400"> | <img src="../img/board_side.jpg" alt="Board side" width="auto" height="400"> | <img src="../img/board_bottom.jpg" alt="Board bottom" width="auto" height="400">
+<img src="../img/board_top.jpg" alt="Board top" width="auto" height="400" style="object-fit:cover;"> | <img src="../img/board_side.jpg" alt="Board side" width="auto" height="400" style="object-fit:cover;"> | <img src="../img/board_bottom.jpg" alt="Board bottom" width="auto" height="400" style="object-fit:cover;">
 
 ## Programmer Wiring
 Board      | Programmer
@@ -29,7 +29,7 @@ RST        | RST
 
 Programmer setup | Programmer connection | Board connection
 --- | --- | ---
-<img src="../img/programmer_setup.jpg" alt="Programmer setup" width="auto" height="400"> | <img src="../img/programmer_connection.jpg" alt="Programmer connection" width="auto" height="400"> | <img src="../img/programmer_to_board_connection.jpg" alt="Programmer to board connection" width="auto" height="400">
+<img src="../img/programmer_setup.jpg" alt="Programmer setup" width="auto" height="400" style="object-fit:cover;"> | <img src="../img/programmer_connection.jpg" alt="Programmer connection" width="auto" height="400" style="object-fit:cover;"> | <img src="../img/programmer_to_board_connection.jpg" alt="Programmer to board connection" width="auto" height="400" style="object-fit:cover;">
 
 ## Serial Wiring (optional)
 Board | Serial to USB
@@ -39,7 +39,7 @@ INT   | RX
 
 Serial setup | Serial connection | Board connection
 --- | --- | ---
-<img src="../img/serial_setup.jpg" alt="Serial setup" width="auto" height="400"> | <img src="../img/serial_connection.jpg" alt="Serial connection" width="auto" height="400"> | <img src="../img/serial_to_board_connection.jpg" alt="Serial to board connection" width="auto" height="400">
+<img src="../img/serial_setup.jpg" alt="Serial setup" width="auto" height="400" style="object-fit:cover;"> | <img src="../img/serial_connection.jpg" alt="Serial connection" width="auto" height="400" style="object-fit:cover;"> | <img src="../img/serial_to_board_connection.jpg" alt="Serial to board connection" width="auto" height="400" style="object-fit:cover;">
 
 ## Upload
 - Wire up the programmer to the board
