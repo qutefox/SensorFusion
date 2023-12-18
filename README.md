@@ -1,9 +1,7 @@
 # Board:
 Top | Bottom
 --- | ---
-{:refdef: style="object-fit:cover;"}
-<img src="img/small_top_side.png" alt="Board top side" width="auto" height="250"> | <img src="img/small_bottom_side.png" alt="Board bottom side" width="auto" height="250" >
-{: refdef}
+<img src="img/small_top_side.png" alt="Board top side" width="164" height="250"> | <img src="img/small_bottom_side.png" alt="Board bottom side" width="164" height="250" >
 
 # TODOs:
 - calibrate
