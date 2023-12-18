@@ -60,7 +60,7 @@ typedef struct
     uint8_t calibration_upload_stop   : 1;
     uint8_t calibration_upload_cancel : 1;
     uint8_t calibration_reset         : 1;
-    uint8_t calibration_active        : 1;
+    uint8_t calibration_active        : 1; // When 1 then the fusion algo applies calibration, when 0 ignores calibration.
     uint8_t software_restart          : 1;
 } control2_t;
 
@@ -69,17 +69,19 @@ typedef struct
 #define STATUS_REGISTER_DEFAULT_VALUE              0x00
 #define STATUS_REGISTER_FUSION_RUNNING_MASK        0x01
 #define STATUS_REGISTER_CALIBRATION_UPLOADING_MASK 0x02
+#define STATUS_REGISTER_FUSION_ERROR_MASK          0x08
 #define STATUS_REGISTER_GYRO_ERROR_MASK            0x10
 #define STATUS_REGISTER_ACCEL_ERROR_MASK           0x20
 #define STATUS_REGISTER_MAG_ERROR_MASK             0x40
 #define STATUS_REGISTER_BARO_ERROR_MASK            0x80
-#define STATUS_REGISTER_ERRORS_MASK                0xF0
+#define STATUS_REGISTER_ERRORS_MASK                0xF8
 
 typedef struct
 {
     uint8_t fusion_running        : 1;
     uint8_t calibration_uploading : 1;
-    uint8_t                       : 2;
+    uint8_t                       : 1;
+    uint8_t fusion_error          : 1;
     uint8_t gyro_error            : 1;
     uint8_t accel_error           : 1;
     uint8_t mag_error             : 1;

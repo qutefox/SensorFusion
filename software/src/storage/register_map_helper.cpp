@@ -30,6 +30,18 @@ RegisterMapHelper* RegisterMapHelper::get_instance(RegisterMapInterface* registe
     return instance;
 }
 
+void RegisterMapHelper::set_fusion_error(bool error)
+{
+    if (error)
+    {
+        register_map->get_status_register()->set_bits(STATUS_REGISTER_FUSION_ERROR_MASK, false, false);
+    }
+    else
+    {
+        register_map->get_status_register()->clear_bits(STATUS_REGISTER_FUSION_ERROR_MASK, false, false);
+    }
+}
+
 void RegisterMapHelper::set_gyroscope_sensor_error(bool error)
 {
     if (error)

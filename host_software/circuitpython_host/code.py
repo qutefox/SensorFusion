@@ -1,5 +1,6 @@
 import time
 import board
+import pros3
 
 from sensor_fusion import SensorFusion, Powermode
 
@@ -11,6 +12,9 @@ def scan(i2c):
 
     finally:  # unlock the i2c bus when ctrl-c'ing out of the loop
         i2c.unlock()
+
+pros3.set_ldo2_power(True)
+time.sleep(1)
 
 i2c = board.I2C()
 # scan(i2c)

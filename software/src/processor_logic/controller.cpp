@@ -62,6 +62,7 @@ void Controller::handle_register_writes()
         {
             if (host_can_control_led && (written_bit_mask & CONTROL1_REGISTER_LED_MASK))
             {
+                // Useful if you have multiple boards and you would like to verify which is which.
                 board->get_led_pin()->write(reg.control1.led ? 1 : 0);
             }
             if (written_bit_mask & CONTROL1_REGISTER_EULER_MASK)

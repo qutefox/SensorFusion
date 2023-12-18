@@ -19,6 +19,7 @@ private:
 
     FusionOffset ahrs_offset;
     FusionAhrs ahrs;
+    FusionAhrsFlags ahrs_flags;
     FusionQuaternion quaternion_fqvect = FUSION_IDENTITY_QUATERNION;
     FusionEuler euler = FUSION_EULER_ZERO;
     FusionVector earth = FUSION_VECTOR_ZERO;
@@ -42,6 +43,11 @@ private:
     bool use_calibration_data = true;
     bool euler_output_enabled = false;
     bool earth_output_enabled = false;
+
+    bool ahrs_error = false;
+    bool ahrs_gyro_error = false;
+    bool ahrs_accel_error = false;
+    bool ahrs_mag_error = false;
 
     FusionMatrix gyroscope_misalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
     FusionVector gyroscope_sensitivity = {1.0f, 1.0f, 1.0f};

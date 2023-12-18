@@ -35,6 +35,10 @@ FusionData::FusionData()
     , use_calibration_data{ false }
     , euler_output_enabled{ false }
     , earth_output_enabled{ false }
+    , ahrs_error{ false }
+    , ahrs_gyro_error{ false }
+    , ahrs_accel_error{ false }
+    , ahrs_mag_error{ false }
 {
     FusionAhrsInitialise(&ahrs);
 
@@ -121,6 +125,11 @@ void FusionData::reset()
     has_new_gyroscope_data = false;
     has_new_accelerometer_data = false;
     has_new_magnetometer_data = false;
+
+    ahrs_error = false;
+    ahrs_gyro_error = false;
+    ahrs_accel_error = false;
+    ahrs_mag_error = false;
 }
 
 void FusionData::update_register_map()
@@ -284,6 +293,61 @@ void FusionData::update_fusion()
     // This method should be called repeatedly each time new gyroscope data is available.
     // Update gyroscope AHRS algorithm.
     FusionAhrsUpdate(&ahrs, gyroscope_fvect, accelerometer_fvect, magnetometer_fvect, get_time_delta_in_seconds());
+
+    ahrs_flags = FusionAhrsGetFlags(&ahrs);
+
+    bool current_ahrs_error = false;
+    if (ahrs_flags.angularRateRecovery)
+    {
+        register_map_helper->set_gyroscope_sensor_error(true);
+        ahrs_gyro_error = true;
+        current_ahrs_error = true;
+    }
+    else if (ahrs_gyro_error)
+    {
+        register_map_helper->set_gyroscope_sensor_error(false);
+        ahrs_gyro_error = false;
+    }
+
+    if (ahrs_flags.accelerationRecovery)
+    {
+        register_map_helper->set_accelerometer_sensor_error(true);
+        ahrs_accel_error = true;
+        current_ahrs_error = true;
+    }
+    else if (ahrs_accel_error)
+    {
+        register_map_helper->set_accelerometer_sensor_error(false);
+        ahrs_accel_error = false;
+    }
+
+    if (ahrs_flags.magneticRecovery)
+    {
+        register_map_helper->set_magnetometer_sensor_error(true);
+        ahrs_mag_error = true;
+        current_ahrs_error = true;
+    }
+    else if (ahrs_mag_error)
+    {
+        register_map_helper->set_magnetometer_sensor_error(false);
+        ahrs_mag_error = false;
+    }
+
+    if (current_ahrs_error != ahrs_error)
+    {
+        ahrs_error = current_ahrs_error;
+        register_map_helper->set_fusion_error(ahrs_error);
+
+        // Hmm, should we not provide output data?!
+        // For the time being, try to give something to the user.
+        // We might change this in the future when we are older and wiser.
+    }
+
+    if (ahrs_flags.initialising)
+    {
+        // Only provide output data after init is done.
+        return;
+    }
     
     quaternion_fqvect = FusionAhrsGetQuaternion(&ahrs);
     has_new_quaternion_data = true;

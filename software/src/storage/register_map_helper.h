@@ -28,6 +28,7 @@ public:
 
     static RegisterMapHelper* get_instance(RegisterMapInterface* register_map);
 
+    void set_fusion_error(bool error);
     void set_gyroscope_sensor_error(bool error);
     void set_accelerometer_sensor_error(bool error);
     void set_magnetometer_sensor_error(bool error);
