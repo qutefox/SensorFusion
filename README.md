@@ -1,6 +1,7 @@
 # Board:
-<img src="img/top_side.png" alt="Board top side" width="auto" height="250">
-<img src="img/bottom_side.png" alt="Board bottom side" width="auto" height="250">
+Top | Bottom
+--- | ---
+<img src="img/top_side.png" alt="Board top side" width="auto" height="250"> | <img src="img/bottom_side.png" alt="Board bottom side" width="auto" height="250">
 
 # TODOs:
 - calibrate
