@@ -1,8 +1,8 @@
 # Board:
-![Board top side](img/top_side.png "Board top side")
-![Board bottom side](img/bottom_side.png "Board bottom side")
+<img src="img/top_side.png" alt="Board top side" width="auto" height="250">
+<img src="img/bottom_side.png" alt="Board bottom side" width="auto" height="250">
 
-#TODOs:
+# TODOs:
 - calibrate
 - host interrupt pin function
 - remove all debug serial print lines and uninit debug serial port
