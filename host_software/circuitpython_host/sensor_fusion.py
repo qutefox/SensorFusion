@@ -463,7 +463,7 @@ class SensorFusion:
 
     def _set_gyro_calibration_data(self, gyro_calibration_data:InertialCalibrationData):
         '''
-        Does not starts and stops (applies) the calibration data.
+        Does not start and stop (applies) the calibration data.
         User must call start_calibration_upload() before and
         stop_calibration_upload() after calling this method.
         '''
@@ -475,7 +475,7 @@ class SensorFusion:
 
     def _set_accel_calibration_data(self, accel_calibration_data:InertialCalibrationData):
         '''
-        Does not starts and stops (applies) the calibration data.
+        Does not start and stop (applies) the calibration data.
         User must call start_calibration_upload() before and
         stop_calibration_upload() after calling this method.
         '''
@@ -487,7 +487,7 @@ class SensorFusion:
 
     def _set_mag_calibration_data(self, mag_calibration_data:MagCalibrationData):
         '''
-        Does not starts and stops (applies) the calibration data.
+        Does not start and stop (applies) the calibration data.
         User must call start_calibration_upload() before and
         stop_calibration_upload() after calling this method.
         '''
